@@ -129,7 +129,7 @@ class GoesAWSInterface(object):
             List of months for which data is available
         """
 
-        days = self.get_avail_days(satellite, product, year)
+        days = self._get_avail_days(satellite, product, year)
         months = self._decode_julian_day(year, days, 'm')
 
         return months
@@ -243,7 +243,7 @@ class GoesAWSInterface(object):
         jul_day = date.timetuple().tm_yday
 
         prefix = self._build_prefix(product, year, jul_day, hour, sector)
-        resp = self.get_sat_bucket(satellite, prefix)
+        resp = self._get_sat_bucket(satellite, prefix)
 
         for each in list(resp['Contents']):
 
@@ -380,11 +380,11 @@ class GoesAWSInterface(object):
             prefix += product
             prefix += '/'
         if year is not None:
-            prefix += self.build_year_format(year)
+            prefix += self._build_year_format(year)
         if julian_day is not None:
-            prefix += self.build_day_format(julian_day)
+            prefix += self._build_day_format(julian_day)
         if hour is not None:
-            prefix += self.build_hour_format(hour)
+            prefix += self._build_hour_format(hour)
         if product is not None:
             prefix += 'OR_' + product
         if sector is not None:
