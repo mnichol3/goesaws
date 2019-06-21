@@ -550,7 +550,7 @@ class GoesAWSInterface(object):
 
         fname = 'ABI-L2-' + product + '/' + year + '/' + day
         fname += '/OR_ABI-L2-' + product + sector + '-' + mode
-        fname += self.build_channel_format(channel) + '_G' + satellite[-2:] + '_'
+        fname += self._build_channel_format(channel) + '_G' + satellite[-2:] + '_'
         fname += 's' + year + day + hour + minute
 
         return fname
