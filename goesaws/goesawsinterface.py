@@ -155,7 +155,7 @@ class GoesAWSInterface(object):
         -------
         days : set of str
         """
-        days = set()
+        days = []
 
         prefix = self._build_prefix(product, year)
         resp = self._get_sat_bucket(satellite, prefix)
@@ -163,7 +163,7 @@ class GoesAWSInterface(object):
         for each in resp.get('CommonPrefixes'):
             match = self._day_re.search(each['Prefix'])
             if (match is not None):
-                days.add(match.group(1))
+                days.append(match.group(1))
 
         return days
 
