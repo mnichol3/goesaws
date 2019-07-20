@@ -153,9 +153,9 @@ class GoesAWSInterface(object):
 
         Returns
         -------
-        days : list of str
+        days : set of str
         """
-        days = []
+        days = set()
 
         prefix = self._build_prefix(product, year)
         resp = self._get_sat_bucket(satellite, prefix)
@@ -163,7 +163,7 @@ class GoesAWSInterface(object):
         for each in resp.get('CommonPrefixes'):
             match = self._day_re.search(each['Prefix'])
             if (match is not None):
-                days.append(match.group(1))
+                days.add(match.group(1))
 
         return days
 
@@ -290,17 +290,27 @@ class GoesAWSInterface(object):
         start_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
         end_dt = datetime.strptime(end, '%m-%d-%Y-%H:%M')
 
+        avail_imgs = self.get_avail_images(satellite, product, start_dt, sector, channel)
+        prev_hour = start_dt.hour
+        first = True
+
         for day in self._datetime_range(start_dt, end_dt):
+            curr_hour = day.hour
 
-            avail_imgs = self.get_avail_images(satellite, product, day, sector, channel)
+            if (prev_hour != curr_hour):
+                first = True
 
-            for img in avail_imgs:
-                if (self._build_channel_format(channel) in img.shortfname and sector in img.shortfname):
-                    if self._is_within_range(start_dt, end_dt, datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')):
-                        if (img.shortfname not in added):
-                            added.append(img.shortfname)
-                            images.append(img)
+            if (first):
+                first = False
+                avail_imgs = self.get_avail_images(satellite, product, day, sector, channel)
 
+                for img in avail_imgs:
+                    if ((self._build_channel_format(channel) in img.shortfname) and (sector in img.shortfname)):
+                        if (self._is_within_range(start_dt, end_dt, datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
+                            if (img.shortfname not in added):
+                                added.append(img.shortfname)
+                                images.append(img)
+            prev_hour = curr_hour
         return images
 
 
