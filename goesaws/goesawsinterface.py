@@ -129,7 +129,7 @@ class GoesAWSInterface(object):
             List of months for which data is available
         """
 
-        days = self._get_avail_days(satellite, product, year)
+        days = self.get_avail_days(satellite, product, year)
         months = self._decode_julian_day(year, days, 'm')
 
         return months
