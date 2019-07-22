@@ -244,6 +244,7 @@ class GoesAWSInterface(object):
 
         prefix = self._build_prefix(product, year, jul_day, hour, sector)
         resp = self._get_sat_bucket(satellite, prefix)
+        print(prefix)
 
         for each in list(resp['Contents']):
 
@@ -385,23 +386,26 @@ class GoesAWSInterface(object):
         prefix : str
         """
         prefix = ''
+        prod2 = False
 
         if product is not None:
-            prefix += product
-            prefix += '/'
+            if (sector is None):
+                raise ValueError('Sector cannont be None')
+            else:
+                prefix += product
+                prefix += sector[0]
+                prefix += '/'
         if year is not None:
             prefix += self._build_year_format(year)
         if julian_day is not None:
             prefix += self._build_day_format(julian_day)
         if hour is not None:
             prefix += self._build_hour_format(hour)
-        if product is not None:
+        if (product is not None) and (hour is not None):
             prefix += 'OR_' + product
-        if sector is not None:
-            if ('M' in sector):
-                prefix += sector[-1]
-            else:
-                prefix += sector
+            prod2 = True
+        if (sector is not None) and (prod2):
+            prefix += sector
 
         return prefix
 
