@@ -76,7 +76,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_years(self, satellite, product):
+    def get_avail_years(self, satellite, product, sector):
         """
         Gets the years for which data is available for a given satellite & product
 
@@ -96,7 +96,7 @@ class GoesAWSInterface(object):
         """
         years = []
 
-        prefix = self._build_prefix(product)
+        prefix = self._build_prefix(product=product, sector=sector)
         resp = self._get_sat_bucket(satellite, prefix)
 
         for each in resp.get('CommonPrefixes'):
@@ -136,7 +136,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_days(self, satellite, product, year):
+    def get_avail_days(self, satellite, product, sector, year):
         """
         Retrieves the days of the given year for which data is available for the
         given satellite and product
@@ -157,7 +157,7 @@ class GoesAWSInterface(object):
         """
         days = []
 
-        prefix = self._build_prefix(product, year)
+        prefix = self._build_prefix(product=product, sector=sector, year=year)
         resp = self._get_sat_bucket(satellite, prefix)
 
         for each in resp.get('CommonPrefixes'):
@@ -169,7 +169,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_hours(self, satellite, product, date):
+    def get_avail_hours(self, satellite, product, sector, date):
         """
         Gets the hours that data is available for a given satellite, product,
         and date
@@ -194,7 +194,7 @@ class GoesAWSInterface(object):
         year = date[-4:]
         jul_day = datetime.strptime(date, '%m-%d-%Y').timetuple().tm_yday
 
-        prefix = self._build_prefix(product, year, jul_day)
+        prefix = self._build_prefix(product=product, sector=sector, year=year, julian_day=jul_day)
         resp = self._get_sat_bucket(satellite, prefix)
 
         for each in resp.get('CommonPrefixes'):
@@ -242,9 +242,8 @@ class GoesAWSInterface(object):
         hour = date.hour
         jul_day = date.timetuple().tm_yday
 
-        prefix = self._build_prefix(product, year, jul_day, hour, sector)
+        prefix = self._build_prefix(product=product, year=year, julian_day=jul_day, hour=hour, sector=sector)
         resp = self._get_sat_bucket(satellite, prefix)
-        print(prefix)
 
         for each in list(resp['Contents']):
 
