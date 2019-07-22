@@ -531,7 +531,9 @@ class GoesAWSInterface(object):
 
 
     def _datetime_range(self, start, end):
-
+        """
+        Creates a range of datetime objects for the period defined by start & end
+        """
         diff = (end + timedelta(minutes = 1)) - start
 
         for x in range(int(diff.total_seconds() / 60)):
@@ -540,7 +542,16 @@ class GoesAWSInterface(object):
 
 
     def _is_within_range(self, start, end, value):
+        """
+        Checks to see if a value is within the range defined by start and end
 
+        Parameters
+        ----------
+
+        Returns
+        -------
+        boolean
+        """
         if value >= start and value <= end:
             return True
         else:
@@ -549,7 +560,26 @@ class GoesAWSInterface(object):
 
 
     def _parse_partial_fname(self, satellite, product, sector, channel, date):
+        """
+        Constructs a partial filename for a GOES ABI file
 
+        Parameters
+        ----------
+        satellite : str
+            Valid: 'goes16' & 'goes17'
+        product : str
+            Satellite product
+        sector : str
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+        channel : int
+            ABI channel
+        date : datetime object apparently
+
+        Returns
+        -------
+        fname : str
+            Partial filename of ABI file
+        """
         if (date.year > 2018):
             mode = 'M6'
         else:
@@ -570,7 +600,20 @@ class GoesAWSInterface(object):
 
 
     def _decode_julian_day(self, year, days, key):
+        """
+        Converts date from Julian day to month & day
 
+        Parameters
+        ----------
+        year : str
+        days : list of something idk
+        key : str
+            'm' is good here
+
+        Returns
+        -------
+        a list of dates
+        """
         dates = {}
 
         if not isinstance(year, str):
@@ -592,6 +635,25 @@ class GoesAWSInterface(object):
 
 
     def _download(self, awsgoesfile, basepath, keep_aws_folders, satellite):
+        """
+        Download helper func. If the file already exists in the specified path,
+        it is not re-downloaded.
+
+        Parameters
+        ----------
+        awsgoesfile : An AwsGoesFile object
+            AwsGoesFile related to the file to download
+        basepath : str
+            Path to download the file to
+        keep_aws_folders : bool
+            Whether or not to keep the AWS file structure
+        satellite : str
+            Satellite that created the data
+
+        Returns
+        -------
+        LocalGoesFile object
+        """
 
         dirpath, filepath = awsgoesfile._create_filepath(basepath, keep_aws_folders)
 
@@ -603,22 +665,25 @@ class GoesAWSInterface(object):
             else:
                 raise
 
-        try:
-            s3 = boto3.client('s3')
-            s3.meta.events.register('choose-signer.s3.*', disable_signing)
-            if (satellite == 'goes16'):
-                bucket = 'noaa-goes16'
-            elif (satellite == 'goes17'):
-                bucket = 'noaa-goes17'
-            else:
-                print('Error: Invalid satellite')
-                sys.exit(0)
+        if (not os.path.exists(filepath)):
+            try:
+                s3 = boto3.client('s3')
+                s3.meta.events.register('choose-signer.s3.*', disable_signing)
+                if (satellite == 'goes16'):
+                    bucket = 'noaa-goes16'
+                elif (satellite == 'goes17'):
+                    bucket = 'noaa-goes17'
+                else:
+                    print('Error: Invalid satellite')
+                    sys.exit(0)
 
-            s3.download_file(bucket, awsgoesfile.key, filepath)
+                s3.download_file(bucket, awsgoesfile.key, filepath)
+                return LocalGoesFile(awsgoesfile, filepath)
+            except:
+                message = 'Download failed for {}'.format(awsgoesfile.shortfname)
+                raise GoesAwsDownloadError(message, awsgoesfile)
+        else:
             return LocalGoesFile(awsgoesfile, filepath)
-        except:
-            message = 'Download failed for {}'.format(awsgoesfile.shortfname)
-            raise GoesAwsDownloadError(message, awsgoesfile)
 
 
 
