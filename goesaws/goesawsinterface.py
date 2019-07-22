@@ -290,7 +290,6 @@ class GoesAWSInterface(object):
         start_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
         end_dt = datetime.strptime(end, '%m-%d-%Y-%H:%M')
 
-        avail_imgs = self.get_avail_images(satellite, product, start_dt, sector, channel)
         prev_hour = start_dt.hour
         first = True
 
