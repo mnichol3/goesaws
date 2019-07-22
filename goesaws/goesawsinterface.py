@@ -591,7 +591,7 @@ class GoesAWSInterface(object):
 
     def _download(self, awsgoesfile, basepath, keep_aws_folders, satellite):
 
-        dirpath, filepath = awsgoesfile.create_filepath(basepath, keep_aws_folders)
+        dirpath, filepath = awsgoesfile._create_filepath(basepath, keep_aws_folders)
 
         try:
             os.makedirs(dirpath)
