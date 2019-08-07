@@ -268,7 +268,8 @@ class GoesAWSInterface(object):
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
         product : str
-            Imagery product to retrieve available data for
+            Imagery product to retrieve available data for.
+            Valid products: 'ABI-L2-CMIP', 'ABI-L1b-Rad'
         start : str
             Start date & time of the data. Format: MM-DD-YYYY-HH:MM
         end : str
@@ -283,6 +284,13 @@ class GoesAWSInterface(object):
         images : list of AwsGoesFile objects
             AwsGoesFile objects representing available data files between the start
             and end date & times, inclusive
+
+        Notes
+        -----
+        * To get the most recent file from AWS, the 'end' time param can be set
+          for a future time (ex: its currently 1230, end can be set to 1300)
+        * To get only one file, 'start' & 'end' can both be set to the time
+          of the desired file
         """
         images = []
         added = []
