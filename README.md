@@ -28,6 +28,13 @@ imgs = conn.get_avail_images_in_range('goes16', 'ABI-L2-CMIP', '8-6-2019-15:00',
 # Print the scan times and names of the AWSGoesFile objects
 for img in imgs:
     print('{} --> {}'.format(img.scan_time, img.filename)
+
+# Download the ABI files to the directory specified in 'local_abi_path'
+result = conn.download('goes16', imgs, local_abi_path, keep_aws_folders=False, threads=6)
+
+# Print the local paths & filenames of the successfully downloaded files
+for x in results._successfiles:
+    print(x.filepath)
 ```
 Output:
 ```console
@@ -42,18 +49,7 @@ Output:
 08-06-2019-15:08 --> OR_ABI-L2-CMIPM2-M6C13_G16_s20192181508281_e20192181508350_c20192181508422.nc
 08-06-2019-15:09 --> OR_ABI-L2-CMIPM2-M6C13_G16_s20192181509281_e20192181509351_c20192181509417.nc
 08-06-2019-15:10 --> OR_ABI-L2-CMIPM2-M6C13_G16_s20192181510281_e20192181510354_c20192181510415.nc
-```
 
-```python
-# Download the ABI files to the directory specified in 'local_abi_path'
-result = conn.download('goes16', imgs, local_abi_path, keep_aws_folders=False, threads=6)
-
-# Print the local paths & filenames of the successfully downloaded files
-for x in results._successfiles:
-    print(x.filepath)
-```
-Output:
-```console
 Downloaded OR_ABI-L2-CMIPM2-M6C13_G16_s20192181500281_e20192181500352_c20192181500415.nc
 Downloaded OR_ABI-L2-CMIPM2-M6C13_G16_s20192181503281_e20192181503350_c20192181503409.nc
 Downloaded OR_ABI-L2-CMIPM2-M6C13_G16_s20192181501281_e20192181501350_c20192181501406.nc
