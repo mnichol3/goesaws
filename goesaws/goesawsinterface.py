@@ -251,9 +251,9 @@ class GoesAWSInterface(object):
             if (match is not None):
                 if (sector in match.group(1) and channel in match.group(1)):
                     time = match.group(2)
-                    dt = datetime.strptime(str(year) + ' ' + str(jul_day) + ' ' + time, '%Y %j %H%M')
+                    dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
                     dt = dt.strftime('%m-%d-%Y-%H:%M')
-                    images.append(AwsGoesFile(each['Key'], match.group(1) + ' ' + dt, dt))
+                    images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
 
         return images
 
@@ -312,8 +312,10 @@ class GoesAWSInterface(object):
                 avail_imgs = self.get_avail_images(satellite, product, day, sector, channel)
 
                 for img in avail_imgs:
-                    if ((self._build_channel_format(channel) in img.shortfname) and (sector in img.shortfname)):
-                        if (self._is_within_range(start_dt, end_dt, datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
+                    if ((self._build_channel_format(channel) in img.shortfname) and
+                        (sector in img.shortfname)):
+                        if (self._is_within_range(start_dt, end_dt,
+                                datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
                             if (img.shortfname not in added):
                                 added.append(img.shortfname)
                                 images.append(img)
@@ -354,7 +356,8 @@ class GoesAWSInterface(object):
         errors = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-            future_download = {executor.submit(self._download,goesfile,basepath,keep_aws_folders,satellite): goesfile for goesfile in awsgoesfiles}
+            future_download = {executor.submit(self._download,goesfile,basepath,keep_aws_folders,satellite):
+                                            goesfile for goesfile in awsgoesfiles}
 
             for future in concurrent.futures.as_completed(future_download):
                 try:
@@ -398,9 +401,7 @@ class GoesAWSInterface(object):
             if (sector is None):
                 raise ValueError('Sector cannont be None')
             else:
-                prefix += product
-                prefix += sector[0]
-                prefix += '/'
+                prefix += '{}{}/'.format(product, sector[0])
         if year is not None:
             prefix += self._build_year_format(year)
         if julian_day is not None:
@@ -408,7 +409,7 @@ class GoesAWSInterface(object):
         if hour is not None:
             prefix += self._build_hour_format(hour)
         if (product is not None) and (hour is not None):
-            prefix += 'OR_' + product
+            prefix += 'OR_{}'.format(product)
             prod2 = True
         if (sector is not None) and (prod2):
             prefix += sector
@@ -598,10 +599,10 @@ class GoesAWSInterface(object):
         hour = str(date.hour)
         minute = str(date.minute)
 
-        fname = 'ABI-L2-' + product + '/' + year + '/' + day
-        fname += '/OR_ABI-L2-' + product + sector + '-' + mode
-        fname += self._build_channel_format(channel) + '_G' + satellite[-2:] + '_'
-        fname += 's' + year + day + hour + minute
+        fname = 'ABI-L2-{}/{}/{}'.format(product, year, day)
+        fname += '/OR_ABI-L2-{}{}-{}'.format(product, sector, mode)
+        fname += '{}_G{}_'.format(self._build_channel_format(channel), satellite[-2:])
+        fname += 's{}{}{}{}'.format(year, day, hour,minute)
 
         return fname
 
@@ -682,8 +683,7 @@ class GoesAWSInterface(object):
                 elif (satellite == 'goes17'):
                     bucket = 'noaa-goes17'
                 else:
-                    print('Error: Invalid satellite')
-                    sys.exit(0)
+                    raise ValueError('Invalid satellite')
 
                 s3.download_file(bucket, awsgoesfile.key, filepath)
                 return LocalGoesFile(awsgoesfile, filepath)
