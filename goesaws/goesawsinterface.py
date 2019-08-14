@@ -1,3 +1,13 @@
+"""
+Author: Matt Nicholson
+
+This file contains functions for the goesaws NOAA Amazon Web Services
+object-oriented interface. It allows GOES-16 & -17 imagery files hosted on NOAA's
+AWS bucket to be easily and quickly found, downloaded, and processed.
+
+For example usage, see ReadMe
+https://github.com/mnichol3/goesaws
+"""
 import os
 import re
 import sys
@@ -13,20 +23,6 @@ import concurrent.futures
 from awsgoesfile import AwsGoesFile
 from downloadresults import DownloadResults
 from localgoesfile import LocalGoesFile
-
-
-"""
-Ex:
-
-import goesawsinterface
-
-conn = goesawsinterface.GoesAWSInterface()
-
-years = conn.get_avail_years('goes16', 'ABI-L1b-RadC')
-
-imgs = conn.get_avail_images('goes16', 'ABI-L1b-RadM', '5-23-2019-21', 'M2', '13')
-
-"""
 
 class GoesAWSInterface(object):
     """
