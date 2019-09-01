@@ -130,6 +130,8 @@ class GoesAWSInterface(object):
 
         if (sensor == 'abi'):
             prefix = self._build_prefix_abi(product=product, sector=sector)
+            if (product is None or sector is None):
+                print('Warning: product/sector parameter is NoneType')
         elif (sensor == 'glm'):
             prefix = self._build_prefix_glm()
         else:
@@ -544,6 +546,10 @@ class GoesAWSInterface(object):
         """
         prefix = ''
         prod2 = False
+        valid_sectors = ['C', 'M1', 'M2']
+
+        if (sector is not None and sector not in valid_sectors):
+            raise ValueError('Invalid sector parameter')
 
         if product is not None:
             if (sector is None):
