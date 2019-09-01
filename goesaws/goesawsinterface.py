@@ -156,7 +156,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_months(self, satellite, sensor, year, product=None):
+    def get_avail_months(self, satellite, sensor, year, product=None, sector=None):
         """
         Gets the months for which data is available for a given satellite, product,
         and year
@@ -177,7 +177,7 @@ class GoesAWSInterface(object):
             List of months for which data is available
         """
 
-        days = self.get_avail_days(satellite, sensor, year, product)
+        days = self.get_avail_days(satellite, sensor, year, product, sector)
         months = self._decode_julian_day(year, days, 'm')
 
         return months
