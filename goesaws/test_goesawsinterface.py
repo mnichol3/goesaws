@@ -61,14 +61,78 @@ class TestGoesAwsInterface(unittest.TestCase):
         self.assertEqual(len(prods), 11)
         self.assertEqual(prods, abi_prods)
 
-    # def test_scan_time(self):
-    #     self.assertEqual(self.test_scan.scan_time, '05-23-2019-21:00')
-    #
-    # def test_filename(self):
-    #     self.assertEqual(self.test_scan.filename, 'OR_ABI-L1b-RadM2-M6C13_G16_s20191432100129_e20191432100199_c20191432100234.nc')
-    #
-    # def test_shortname(self):
-    #     self.assertEqual(self.test_scan.shortname, 'RadM2-M6C13 05-23-2019-21:00')
+
+
+    ############################ get_avail_years ############################
+
+    # Test invalid satellite
+    def test_get_avail_years1(self):
+        with self.assertRaises(Exception) as context:
+                years = self.conn.get_avail_years('wrong', 'also wrong')
+                self.assertTrue('Invalid satallite parameter' in context.exception)
+
+        with self.assertRaises(Exception) as context:
+                years = self.conn.get_avail_years('g16', 'also wrong')
+                self.assertTrue('Invalid satallite parameter' in context.exception)
+
+
+
+    # Test valid sat, invalid sensor param
+    def test_get_avail_years2(self):
+        with self.assertRaises(Exception) as context:
+                years = self.conn.get_avail_years('goes16', 'wrong')
+                self.assertTrue('Invalid sensor parameter' in context.exception)
+
+        with self.assertRaises(Exception) as context:
+                years = self.conn.get_avail_years('goes17', 'wrong')
+                self.assertTrue('Invalid sensor parameter' in context.exception)
+
+
+
+    # Test missing sector/product params
+    def test_get_avail_years3(self):
+        years = self.conn.get_avail_years('goes16', 'abi')
+        self.assertEqual(len(years), 0)
+        self.assertEqual(years, [])
+
+        with self.assertRaises(Exception) as context:
+            years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L1b-RadF')
+            self.assertTrue('Sector cannot be None' in context.exception)
+
+        years = self.conn.get_avail_years('goes16', 'abi', sector='C')
+        self.assertEqual(len(years), 0)
+        self.assertEqual(years, [])
+
+        with self.assertRaises(Exception) as context:
+            years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L2-CMIP', sector='M3')
+            self.assertTrue('Invalid sector parameter' in context.exception)
+
+
+
+    # Test valid params
+    def test_get_avail_years4(self):
+        years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L1b-RadC', sector='C')
+        self.assertEqual(len(years), 4)
+        self.assertEqual(years, ['2000', '2017', '2018', '2019'])
+
+        years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L2-CMIPC', sector='C')
+        self.assertEqual(len(years), 4)
+        self.assertEqual(years, ['2000', '2017', '2018', '2019'])
+
+        years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L2-CMIP', sector='M1')
+        self.assertEqual(len(years), 4)
+        self.assertEqual(years, ['2000', '2017', '2018', '2019'])
+
+        years = self.conn.get_avail_years('goes16', 'abi', product='ABI-L2-CMIP', sector='M2')
+        self.assertEqual(len(years), 4)
+        self.assertEqual(years, ['2000', '2017', '2018', '2019'])
+
+
+
+    ############################ get_avail_months ############################
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
