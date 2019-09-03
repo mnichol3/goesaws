@@ -13,6 +13,8 @@ import re
 import sys
 from datetime import timedelta, datetime
 
+import logging
+
 import boto3
 import errno
 import pytz
@@ -32,6 +34,16 @@ class GoesAWSInterface(object):
     >>> import goesaws
     >>> conn = goesaws.GoesAwsInterface()
     """
+    try:
+        os.remove('error.log')
+    except OSError:
+        pass
+
+    logging.basicConfig(filename='error.log', level=logging.INFO,
+                        format='%(levelname)s: %(asctime)s: %(module)s.%(funcName)s, line %(lineno)d:\n\t%(message)s',
+                        filemode='w')
+
+
     def __init__(self):
         super(GoesAWSInterface, self).__init__()
         self._year_re = re.compile(r'/(\d{4})/')
@@ -39,6 +51,7 @@ class GoesAWSInterface(object):
         self._hour_re = re.compile(r'/\d{4}/\d{3}/(\d{2})/')
         self._scan_m_re = re.compile(r'(\w{3,4}M\d-M\dC\d{2})_G\d{2}_s\d{7}(\d{4})\d{3}')
         self._scan_c_re = re.compile(r'(\w{4,5}-M\dC\d{2})_G\d{2}_s\d{7}(\d{4})\d{3}')
+        self._scan_re_glm = re.compile(r'(OR_GLM-L2-LCFA)_G\d{2}_s\d{7}(\d{6})\d{1}')
         self._s3conn = boto3.resource('s3')
         self._s3conn.meta.client.meta.events.register('choose-signer.s3.*', disable_signing)
         self._bucket_16 = self._s3conn.Bucket('noaa-goes16')
@@ -46,7 +59,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_products(self, satellite):
+    def get_avail_products(self, satellite, sensor=None):
         """
         Gets a list of available products (Rad, CMIP, MCMIP) for a satellite
 
@@ -55,24 +68,48 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
+        sensor : str, optional
+            Sensor that produced the data. Valid: 'abi' or 'glm'. Default = None
 
         Returns
         -------
         prods : list of str
             List of available products
+
+        Notes
+        -----
+        - 29 AUG 2019
+            - GLM L2 LCFA product hard-coded
         """
         prods = []
 
-        resp = self._get_sat_bucket(satellite, '')
+        if (sensor == 'glm'):
+            # resp = self._get_sat_bucket(satellite, '')
+            #
+            # for x in resp.get('CommonPrefixes'):
+            #     if ('GLM' in x['Prefix']):
+            #         prods.append(x['Prefix'][:-1])
+            prods.append('GLM-L2-LCFA')
+        else:
+            resp = self._get_sat_bucket(satellite, '')
 
-        for x in resp.get('CommonPrefixes'):
-            prods.append(list(x.values())[0][:-1])
+            if (sensor == 'abi'):
+                for x in resp.get('CommonPrefixes'):
+                    if ('ABI' in x['Prefix']):
+                        prods.append(x['Prefix'][:-1])
+            elif (sensor is None):
+                for x in resp.get('CommonPrefixes'):
+                    prods.append(x['Prefix'][:-1])
+            else:
+                logger = logging.getLogger(__name__)
+                logger.error("Invalid sensor parameter %s", sensor)
+                raise ValueError("Invalid sensor parameter. Must be 'abi', 'glm', or None")
 
         return prods
 
 
 
-    def get_avail_years(self, satellite, product, sector):
+    def get_avail_years(self, satellite, sensor, product=None, sector=None):
         """
         Gets the years for which data is available for a given satellite & product
 
@@ -81,8 +118,13 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -92,8 +134,24 @@ class GoesAWSInterface(object):
         """
         years = []
 
-        prefix = self._build_prefix(product=product, sector=sector)
+        if (sensor == 'abi'):
+            prefix = self._build_prefix_abi(product=product, sector=sector)
+            # if (product is None or sector is None):
+            #     print('Warning: product/sector parameter is NoneType')
+        elif (sensor == 'glm'):
+            prefix = self._build_prefix_glm()
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
+
         resp = self._get_sat_bucket(satellite, prefix)
+
+        if (resp.get('CommonPrefixes') is None):
+            logger = logging.getLogger(__name__)
+            logger.error("AWS response is None. Product: {}, Sector: {}, Prefix: {}".format(
+                    product, sector, prefix))
+            raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
             match = self._year_re.search(each['Prefix'])
@@ -104,7 +162,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_months(self, satellite, product, year):
+    def get_avail_months(self, satellite, sensor, year, product=None, sector=None):
         """
         Gets the months for which data is available for a given satellite, product,
         and year
@@ -114,10 +172,15 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         year : str or int
             Year to fetch the available months for
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -125,14 +188,14 @@ class GoesAWSInterface(object):
             List of months for which data is available
         """
 
-        days = self.get_avail_days(satellite, product, year)
+        days = self.get_avail_days(satellite, sensor, year, product, sector)
         months = self._decode_julian_day(year, days, 'm')
 
         return months
 
 
 
-    def get_avail_days(self, satellite, product, sector, year):
+    def get_avail_days(self, satellite, sensor, year, product=None, sector=None):
         """
         Retrieves the days of the given year for which data is available for the
         given satellite and product
@@ -142,10 +205,15 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         year : str or int
             Year to fetch the available months for
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -153,8 +221,27 @@ class GoesAWSInterface(object):
         """
         days = []
 
-        prefix = self._build_prefix(product=product, sector=sector, year=year)
+        if (sensor == 'abi'):
+            if (sector == None):
+                raise ValueError("Missing sector parameter")
+            elif (product == None):
+                raise ValueError("Missing product parameter")
+
+            prefix = self._build_prefix_abi(product=product, sector=sector, year=year)
+
+        elif (sensor == 'glm'):
+            prefix = self._build_prefix_glm(year=year)
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
+
         resp = self._get_sat_bucket(satellite, prefix)
+
+        if (resp.get('CommonPrefixes') is None):
+            logger = logging.getLogger(__name__)
+            logger.error("AWS response is None. Product: {}, Sector: {}".format(product, sector))
+            raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
             match = self._day_re.search(each['Prefix'])
@@ -165,7 +252,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_hours(self, satellite, product, sector, date):
+    def get_avail_hours(self, satellite, sensor, date, product=None, sector=None):
         """
         Gets the hours that data is available for a given satellite, product,
         and date
@@ -175,10 +262,16 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         date : str
-            Date of the data. Format: MM-DD-YYYY
+            Date of the desired imagery/data.
+            Format: MM-DD-YYYY
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -190,8 +283,26 @@ class GoesAWSInterface(object):
         year = date[-4:]
         jul_day = datetime.strptime(date, '%m-%d-%Y').timetuple().tm_yday
 
-        prefix = self._build_prefix(product=product, sector=sector, year=year, julian_day=jul_day)
+        if (sensor == 'abi'):
+            if (product is None or sector is None):
+                logger = logging.getLogger(__name__)
+                logger.error("Invalid product and/or sector parameter (NoneType). Product: {}, Sector: {}".format(product, sector))
+                raise ValueError("Invalid product and/or sector parameter (NoneType)")
+            else:
+                prefix = self._build_prefix_abi(product=product, sector=sector, year=year, julian_day=jul_day)
+        elif (sensor == 'glm'):
+            prefix = self._build_prefix_glm(year=year, julian_day=jul_day)
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
+
         resp = self._get_sat_bucket(satellite, prefix)
+
+        if (resp.get('CommonPrefixes') is None):
+            logger = logging.getLogger(__name__)
+            logger.error("AWS response is None. Product: {}, Sector: {}".format(product, sector))
+            raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
             match = self._hour_re.search(each['Prefix'])
@@ -202,7 +313,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_images(self, satellite, product, date, sector, channel):
+    def get_avail_images(self, satellite, sensor, date, product=None, sector=None, channel=None):
         """
 
         Parameters
@@ -210,14 +321,20 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Which sensor (ABI or GLM) to get data from
+            Valid: 'abi' & 'glm'
+        product : str, optional
+            Imagery product to retrieve available data for. Required to pull ABI
+            data
+            Default = None
         date : str
             Date & time of the data. Format: MM-DD-YYYY-HH
-        sector : str
+        sector : str, optional
             Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
-        channel : int
-            ABI channel
+            Required to pull ABI data. Default = None
+        channel : int, optional
+            ABI channel. Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -225,37 +342,82 @@ class GoesAWSInterface(object):
             AwsGoesFile objects representing available data files
         """
         images = []
-
-        if (sector == 'C'):
-            scan_re = self._scan_c_re
-        else:
-            scan_re = self._scan_m_re
+        abi_sector_dict = {'C': self._scan_c_re,
+                           'M1': self._scan_m_re,
+                           'M2': self._scan_m_re
+        }
 
         if (not isinstance(date, datetime)):
             date = datetime.strptime(date, '%m-%d-%Y-%H')
+
+        if (sensor != 'glm' and not self._validate_product(product)):
+            raise ValueError('Invalid product parameter')
 
         year = date.year
         hour = date.hour
         jul_day = date.timetuple().tm_yday
 
-        prefix = self._build_prefix(product=product, year=year, julian_day=jul_day, hour=hour, sector=sector)
-        resp = self._get_sat_bucket(satellite, prefix)
+        if (sensor == 'abi'):
+            try:
+                # setting the scan_re variable also acts to validate the sector
+                # parameter
+                scan_re = abi_sector_dict[sector]
+            except KeyError:
+                logger = logging.getLogger(__name__)
+                logger.error("Invalid sector parameter %s", sector)
+                raise ValueError("Must provide sector parameter ('M1', 'M2', or 'C') when accessing ABI data")
 
-        for each in list(resp['Contents']):
+            prefix = self._build_prefix_abi(product=product, year=year, julian_day=jul_day,
+                                            hour=hour, sector=sector)
 
-            match = scan_re.search(each['Key'])
-            if (match is not None):
-                if (sector in match.group(1) and channel in match.group(1)):
-                    time = match.group(2)
-                    dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
-                    dt = dt.strftime('%m-%d-%Y-%H:%M')
-                    images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
+            resp = self._get_sat_bucket(satellite, prefix)
+
+            if ('Contents' not in list(resp.keys())):
+                logger = logging.getLogger(__name__)
+                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
+                raise KeyError("'Contents' not in AWS response")
+
+            for each in list(resp['Contents']):
+
+                match = scan_re.search(each['Key'])
+                if (match is not None):
+                    if (sector in match.group(1) and channel in match.group(1)):
+                        time = match.group(2)
+                        dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
+                        dt = dt.strftime('%m-%d-%Y-%H:%M')
+                        images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
+
+        elif (sensor == 'glm'):
+            scan_re = self._scan_re_glm
+            prefix = self._build_prefix_glm(year=year, julian_day=jul_day, hour=hour)
+
+            resp = self._get_sat_bucket(satellite, prefix)
+
+            if ('Contents' not in list(resp.keys())):
+                logger = logging.getLogger(__name__)
+                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
+                raise KeyError("'Contents' not in AWS response")
+
+            for each in list(resp['Contents']):
+
+                match = scan_re.search(each['Key'])
+                if (match is not None):
+                        time = match.group(2)
+                        dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M%S')
+                        dt = dt.strftime('%m-%d-%Y-%H:%M:%S')
+                        images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
+
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter, must be 'abi' or 'glm'")
 
         return images
 
 
 
-    def get_avail_images_in_range(self, satellite, product, start, end, sector, channel):
+    def get_avail_images_in_range(self, satellite, sensor, start, end, product=None,
+            sector=None, channel=None):
         """
 
         Parameters
@@ -263,17 +425,22 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for.
-            Valid products: 'ABI-L2-CMIP', 'ABI-L1b-Rad'
+        sensor : str
+            Which sensor (ABI or GLM) to get data from
+            Valid: 'abi' & 'glm'
         start : str
             Start date & time of the data. Format: MM-DD-YYYY-HH:MM
         end : str
             End date & time of the data. Format: MM-DD-YYYY-HH:MM
-        sector : str
-            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
-        channel : int
-            ABI channel
+        product : str, optional
+            Imagery product to retrieve available data for. Required to pull ABI
+            data. Default = None
+            Valid products: 'ABI-L2-CMIP', 'ABI-L1b-Rad'
+        sector : str, optional
+            Satellite scan sector. Required to pull ABI data. Default = None
+            'M1' = mesoscale 1, 'M2' = mesoscale 2, 'C' = CONUS
+        channel : int, optional
+            ABI channel. Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -297,25 +464,60 @@ class GoesAWSInterface(object):
         prev_hour = start_dt.hour
         first = True
 
-        for day in self._datetime_range(start_dt, end_dt):
-            curr_hour = day.hour
+        if (sensor == 'abi'):
 
-            if (prev_hour != curr_hour):
-                first = True
+            for day in self._datetime_range(start_dt, end_dt):
+                curr_hour = day.hour
 
-            if (first):
-                first = False
-                avail_imgs = self.get_avail_images(satellite, product, day, sector, channel)
+                if (prev_hour != curr_hour):
+                    first = True
 
-                for img in avail_imgs:
-                    if ((self._build_channel_format(channel) in img.shortfname) and
-                        (sector in img.shortfname)):
+                if (first):
+                    first = False
+                    # avail_imgs = self.get_avail_images(satellite, sensor, product, day,
+                    #                                    sector, channel)
+                    avail_imgs = self.get_avail_images(satellite, sensor, day,
+                                                       product=product, sector=sector,
+                                                       channel=channel)
+
+                    for img in avail_imgs:
+                        if ((self._build_channel_format(channel) in img.shortfname) and
+                            (sector in img.shortfname)):
+                            if (self._is_within_range(start_dt, end_dt,
+                                    datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
+                                if (img.shortfname not in added):
+                                    added.append(img.shortfname)
+                                    images.append(img)
+                prev_hour = curr_hour
+        elif (sensor == 'glm'):
+
+            # Increment the end datetime by 1 minute as the three datafiles for
+            # the original end minute technically occur after
+            # Ex: end_dt = 21:30, 21:30:20 & 21:30:40 files wouldn't be included
+            end_dt += timedelta(minutes=1)
+
+            for day in self._datetime_range(start_dt, end_dt):
+                curr_hour = day.hour
+
+                if (prev_hour != curr_hour):
+                    first = True
+
+                if (first):
+                    first = False
+                    avail_imgs = self.get_avail_images(satellite, sensor, day)
+
+                    for img in avail_imgs:
                         if (self._is_within_range(start_dt, end_dt,
-                                datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
+                                datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M:%S'))):
                             if (img.shortfname not in added):
                                 added.append(img.shortfname)
                                 images.append(img)
-            prev_hour = curr_hour
+                prev_hour = curr_hour
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter, must be 'abi' or 'glm'")
+
         return images
 
 
@@ -374,7 +576,7 @@ class GoesAWSInterface(object):
 
 
 
-    def _build_prefix(self, product=None, year=None, julian_day=None, hour=None, sector=None):
+    def _build_prefix_abi(self, product=None, year=None, julian_day=None, hour=None, sector=None):
         """
         Constructs a prefix for the aws bucket
 
@@ -392,12 +594,23 @@ class GoesAWSInterface(object):
         """
         prefix = ''
         prod2 = False
+        valid_sectors = ['C', 'M1', 'M2']
+
+        if (sector is not None and sector not in valid_sectors):
+            raise ValueError('Invalid sector parameter')
 
         if product is not None:
             if (sector is None):
+                logger = logging.getLogger(__name__)
+                logger.error("Invalid sensor parameter 'None'")
                 raise ValueError('Sector cannont be None')
             else:
+                # Trim sector off the end of the product string, if present
+                if (product[-1] in ['C', 'F', 'M']):
+                    product = product[:-1]
+
                 prefix += '{}{}/'.format(product, sector[0])
+
         if year is not None:
             prefix += self._build_year_format(year)
         if julian_day is not None:
@@ -409,6 +622,34 @@ class GoesAWSInterface(object):
             prod2 = True
         if (sector is not None) and (prod2):
             prefix += sector
+
+        return prefix
+
+
+
+    def _build_prefix_glm(self, year=None, julian_day=None, hour=None):
+        """
+        Constructs a prefix for the aws bucket
+
+        Parameters
+        ----------
+        year : str or int, optional
+        julian_day : str or int, optional
+        hour : str or int, optional
+
+        Returns
+        -------
+        prefix : str
+        """
+        prefix = 'GLM-L2-LCFA/'
+
+        if year is not None:
+            prefix += self._build_year_format(year)
+        if julian_day is not None:
+            prefix += self._build_day_format(julian_day)
+        if hour is not None:
+            prefix += self._build_hour_format(hour)
+            prefix += 'OR_GLM-L2-LCFA'
 
         return prefix
 
@@ -431,6 +672,8 @@ class GoesAWSInterface(object):
         elif (isinstance(year, str)):
             return '{}/'.format(year)
         else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid year parameter type %s", type(year).__name__)
             raise TypeError('Year must be of type int or str')
 
 
@@ -453,6 +696,8 @@ class GoesAWSInterface(object):
         elif isinstance(jd, str):
             return '{}/'.format(jd)
         else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid month parameter type %s", type(month).__name__)
             raise TypeError('Month must be int or str type')
 
 
@@ -474,6 +719,8 @@ class GoesAWSInterface(object):
         elif isinstance(hour, str):
             return '{}/'.format(hour)
         else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid hour parameter type %s", type(hour).__name__)
             raise TypeError('Hour must be int or str type')
 
 
@@ -529,6 +776,8 @@ class GoesAWSInterface(object):
         elif (satellite == 'goes17'):
             resp = self._bucket_17.meta.client.list_objects_v2(Bucket='noaa-goes17', Prefix=prefix, Delimiter='/')
         else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid satellite parameter type %s", satellite)
             raise ValueError("Invalid satallite parameter. Must be either 'goes16' or 'goes17'")
 
         return resp
@@ -564,7 +813,7 @@ class GoesAWSInterface(object):
 
 
 
-    def _parse_partial_fname(self, satellite, product, sector, channel, date):
+    def _parse_partial_fname_abi(self, satellite, product, sector, channel, date):
         """
         Constructs a partial filename for a GOES ABI file
 
@@ -598,7 +847,35 @@ class GoesAWSInterface(object):
         fname = 'ABI-L2-{}/{}/{}'.format(product, year, day)
         fname += '/OR_ABI-L2-{}{}-{}'.format(product, sector, mode)
         fname += '{}_G{}_'.format(self._build_channel_format(channel), satellite[-2:])
-        fname += 's{}{}{}{}'.format(year, day, hour,minute)
+        fname += 's{}{}{}{}'.format(year, day, hour, minute)
+
+        return fname
+
+
+
+    def _parse_partial_fname_glm(self, satellite, date):
+        """
+        Constructs a partial filename for a GOES ABI file
+
+        Parameters
+        ----------
+        satellite : str
+            Valid: 'goes16' & 'goes17'
+        date : datetime object apparently
+
+        Returns
+        -------
+        fname : str
+            Partial filename of GLM file
+        """
+        year = str(date.year)
+        day = str(date.timetuple().tm_yday)
+        hour = str(date.hour)
+        minute = str(date.minute)
+
+        fname = 'GLM-L2-LCFA/{}/{}/'.format(year, day)
+        fname += 'OR_GLM-L2-LCFA_G{}_'.format(satellite[-2:])
+        fname += 's{}{}{}{}'.format(year, day, hour, minute)
 
         return fname
 
@@ -636,6 +913,17 @@ class GoesAWSInterface(object):
             return list(dates)
         else:
             return dates
+
+
+
+    def _validate_product(self, product):
+        valid_prods = ['ABI-L1b-Rad', 'ABI-L2-CMIP', 'ABI-L2-FDC',
+                       'ABI-L2-MCMIP', 'GLM-L2-LCFA']
+
+        if (product in valid_prods or product[:-1] in valid_prods):
+            return True
+        else:
+            return False
 
 
 
@@ -679,15 +967,25 @@ class GoesAWSInterface(object):
                 elif (satellite == 'goes17'):
                     bucket = 'noaa-goes17'
                 else:
-                    raise ValueError('Invalid satellite')
+                    logger = logging.getLogger(__name__)
+                    logger.error("Invalid satellite parameter type %s", satellite)
+                    raise ValueError("Invalid satellite parameter. Must be 'goes16' or 'goes17'")
 
                 s3.download_file(bucket, awsgoesfile.key, filepath)
                 return LocalGoesFile(awsgoesfile, filepath)
             except:
                 message = 'Download failed for {}'.format(awsgoesfile.shortfname)
+                logger = logging.getLogger(__name__)
+                logger.error("Failed to download %s", awsgoesfile.shortfname)
                 raise GoesAwsDownloadError(message, awsgoesfile)
         else:
             return LocalGoesFile(awsgoesfile, filepath)
+
+
+
+    def _calc_num_glm_files(self, num_mins):
+        num_files = (3 * (num_mins + 1)) + 1
+        return num_files
 
 
 
