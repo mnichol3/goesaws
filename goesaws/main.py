@@ -9,9 +9,7 @@ conn = goesawsinterface.GoesAWSInterface()
 # Returns a list of AwsGoesFile objects representing AWS
                                                # product      # start date       # end date     # sector  # channel
 # imgs = conn.get_avail_images_in_range('goes16', 'ABI-L2-CMIP', '8-6-2019-15:00', '8-6-2019-15:10', 'M2', '13')
-imgs = conn.get_avail_images_in_range('goes16', 'glm', '8-6-2019-15:00', '8-6-2019-15:10')
-
-# imgs = conn.get_avail_images_in_range('goes16', 'ABI-L2-TPW', '5-23-2019-21:00', '5-23-2019-22:00', 'M2', '13') # TPW unsupported
+imgs = conn.get_avail_images_in_range('goes16', 'glm', '5-23-2019-21:00', '5-23-2019-22:00')
 
 for img in imgs:
     print('{} --> {}'.format(img.scan_time, img.filename))
