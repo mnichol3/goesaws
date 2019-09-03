@@ -356,10 +356,121 @@ class TestGoesAwsInterface(unittest.TestCase):
 
     ############################# get_avail_hours #############################
 
-
+    # Test invalid satellite param
     def test_get_avail_hours1(self):
-        pass
 
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('wrong', 'abi', '05-23-2019', product=None, sector=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('g16', 'abi', '05-23-2019', product=None, sector=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
+
+
+
+    # Test invalid sensor param
+    def test_get_avail_hours2(self):
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('goes16', 'wrong', '05-23-2019', product=None, sector=None)
+            self.assertTrue('Invalid sensor parameter' in context.exception)
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('g16', 'abb', '05-23-2019', product=None, sector=None)
+            self.assertTrue('Invalid sensor parameter' in context.exception)
+
+
+
+    # Test invalid date parameter
+    def test_get_avail_hours3(self):
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('goes16', 'abi', '05232019', product=None, sector=None)
+            self.assertTrue('does not match format' in context.exception)
+
+
+
+    # Test missing product and/or sector params for ABI
+    def test_get_avail_hours4(self):
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product=None, sector=None)
+            self.assertTrue('Invalid product and/or sector parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector=None)
+            self.assertTrue('Invalid product and/or sector parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product=None, sector='M1')
+            self.assertTrue('Invalid product and/or sector parameter' in context.exception)
+
+
+
+    # Test valid input for ABI for GOES-16 & -17
+    def test_get_avail_hours5(self):
+        valid_hours = ['{:02}'.format(x) for x in range(0, 24)]
+
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector='C')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L2-CMIPC', sector='C')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L2-CMIPM', sector='M1')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L2-CMIPC', sector='C')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector='C')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L1b-RadM', sector='M1')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+
+    # Test valid input for GLM for GOES-16 & -17
+    def test_get_avail_hours6(self):
+        valid_hours = ['{:02}'.format(x) for x in range(0, 24)]
+
+        hours = self.conn.get_avail_hours('goes16', 'glm', '05-23-2019')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes16', 'glm', '05-25-2019')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes17', 'glm', '05-25-2019')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+        hours = self.conn.get_avail_hours('goes17', 'glm', '06-16-2019')
+        self.assertEqual(len(hours), 24)
+        self.assertEqual(hours, valid_hours)
+
+
+
+    ############################# get_avail_imagess #############################
 
 
 
