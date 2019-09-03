@@ -22,9 +22,9 @@ import six
 from botocore.handlers import disable_signing
 import concurrent.futures
 
-from awsgoesfile import AwsGoesFile
-from downloadresults import DownloadResults
-from localgoesfile import LocalGoesFile
+from .resources.awsgoesfile import AwsGoesFile
+from .resources.downloadresults import DownloadResults
+from .resources.localgoesfile import LocalGoesFile
 
 class GoesAWSInterface(object):
     """
