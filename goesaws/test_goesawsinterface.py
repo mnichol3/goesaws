@@ -302,23 +302,24 @@ class TestGoesAwsInterface(unittest.TestCase):
 
 
     # Test abi in 2019
+    # Likely to fail if current day of year is not updated
     def test_get_avail_days2(self):
-        valid_days = ['{:03}'.format(x) for x in range(1, 245)]
+        valid_days = ['{:03}'.format(x) for x in range(1, 247)]
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
                                             product='ABI-L2-CMIPC', sector='C')
-        self.assertEqual(len(days), 244)
+        self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
                                             product='ABI-L1b-RadM', sector='M1')
-        self.assertEqual(len(days), 244)
+        self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
                                             product='ABI-L2-CMIPM', sector='M1')
-        self.assertEqual(len(days), 244)
+        self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
 
@@ -340,16 +341,17 @@ class TestGoesAwsInterface(unittest.TestCase):
 
 
     # Test glm 2019
+    # Likely to fail if current day of year is not updated
     def test_get_avail_days4(self):
-        valid_days = ['{:03}'.format(x) for x in range(1, 245)]
+        valid_days = ['{:03}'.format(x) for x in range(1, 247)]
 
         days = self.conn.get_avail_days('goes16', 'glm', '2019')
-        self.assertEqual(len(days), 244)
+        self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'glm', '2019', product='GLM-L2-LCFA')
-        self.assertEqual(len(days), 244)
+        self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
 
@@ -738,7 +740,7 @@ class TestGoesAwsInterface(unittest.TestCase):
         for img in images:
             scan_times_true.append(img.scan_time[:-3])
 
-        self.assertEqual(len(images),  self.conn._calc_num_glm_files(11))
+        self.assertEqual(len(images),  self.conn._calc_num_glm_files(10))
         self.assertEqual(scan_times_artificial, scan_times_true)
 
 
