@@ -236,7 +236,7 @@ class GoesAWSInterface(object):
 
 
 
-    def get_avail_hours(self, satellite, product, sector, date):
+    def get_avail_hours(self, satellite, sensor, date, product=None, sector=None):
         """
         Gets the hours that data is available for a given satellite, product,
         and date
@@ -261,7 +261,20 @@ class GoesAWSInterface(object):
         year = date[-4:]
         jul_day = datetime.strptime(date, '%m-%d-%Y').timetuple().tm_yday
 
-        prefix = self._build_prefix(product=product, sector=sector, year=year, julian_day=jul_day)
+        if (sensor == 'abi'):
+            if (product is None or sector is None):
+                logger = logging.getLogger(__name__)
+                logger.error("Invalid product and/or sector parameter (NoneType). Product: {}, Sector: {}".format(product, sector))
+                raise ValueError("Invalid product and/or sector parameter (NoneType)")
+            else:
+                prefix = self._build_prefix_abi(product=product, sector=sector, year=year, julian_day=jul_day)
+        elif (sensor == 'glm'):
+            prefix = self._build_prefix_glm(year=year, julian_day=jul_day)
+        else:
+            logger = logging.getLogger(__name__)
+            logger.error("Invalid sensor parameter %s", sensor)
+            raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
+
         resp = self._get_sat_bucket(satellite, prefix)
 
         if (resp.get('CommonPrefixes') is None):
