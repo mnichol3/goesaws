@@ -470,7 +470,7 @@ class TestGoesAwsInterface(unittest.TestCase):
 
 
 
-    ############################# get_avail_imagess #############################
+    ############################# get_avail_images #############################
 
 
     # Test invalid satellite param
@@ -617,6 +617,180 @@ class TestGoesAwsInterface(unittest.TestCase):
 
         self.assertEqual(len(images), 180)
         self.assertEqual(scan_times_true, scan_times_artificial)
+
+
+
+    ######################### get_avail_images_in_range #########################
+
+    ## Since get_avail_images_in_range calls get_avail_images, we can skip many
+    ## of the error cases
+
+
+    # Test invalid start/end params
+    def test_get_avail_images_in_range1(self):
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                         '05232019-12', '05232019-13',
+                                                         product=None,
+                                                         sector=None, channel=None)
+            self.assertTrue('does not match format' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                         '05-23-2019-12',
+                                                         '05-23-2019-13',
+                                                         product=None,
+                                                         sector=None, channel=None)
+            self.assertTrue('does not match format' in context.exception)
+
+
+
+    # Test invalid product param
+    def test_get_avail_images_in_range2(self):
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                         '05-23-2019-12:00',
+                                                         '05-23-2019-12:10',
+                                                         product='wrong',
+                                                         sector='M1', channel='3')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                         '05-23-2019-12:00',
+                                                         '05-23-2019-12:10',
+                                                         product='ABI-L1-RadM',
+                                                         sector='M1', channel='3')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                         '05-23-2019-12:00',
+                                                         '05-23-2019-12:10',
+                                                         product='ABI-L2-CMIIPM',
+                                                         sector='M1', channel='3')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+
+    # Test valid params for ABI
+    def test_get_avail_images_in_range3(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:10', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = [datetime.strftime(x, '%m-%d-%Y-%H:%M') for x in self.conn._datetime_range(start, end)]
+
+        images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                     '05-23-2019-12:00',
+                                                     '05-23-2019-12:10',
+                                                     product='ABI-L2-CMIPM',
+                                                     sector='M1', channel='3')
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time)
+
+        self.assertEqual(len(images), 11)
+        self.assertEqual(scan_times_artificial, scan_times_true)
+
+
+
+    # Test valid params for ABI
+    def test_get_avail_images_in_range4(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:59', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = [datetime.strftime(x, '%m-%d-%Y-%H:%M') for x in self.conn._datetime_range(start, end)]
+
+        images = self.conn.get_avail_images_in_range('goes16', 'abi',
+                                                     '05-23-2019-12:00',
+                                                     '05-23-2019-12:59',
+                                                     product='ABI-L2-CMIPM',
+                                                     sector='M1', channel='3')
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time)
+
+        self.assertEqual(len(images), 60)
+        self.assertEqual(scan_times_artificial, scan_times_true)
+
+
+
+    # Test valid params for GLM
+    # length = (3 * (t1 - t0 + 1)) + 1
+    def test_get_avail_images_in_range5(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:10', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = []
+        for t in self.conn._datetime_range(start, end):
+            scan_times_artificial += [datetime.strftime(t, '%m-%d-%Y-%H:%M')] * 3
+        scan_times_artificial.append('05-23-2019-12:11')
+
+        images = self.conn.get_avail_images_in_range('goes16', 'glm',
+                                                     '05-23-2019-12:00',
+                                                     '05-23-2019-12:10'
+                                                     )
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time[:-3])
+
+        self.assertEqual(len(images),  self.conn._calc_num_glm_files(11))
+        self.assertEqual(scan_times_artificial, scan_times_true)
+
+
+
+    # Test valid params for GLM
+    # length = (3 * (t1 - t0 + 1)) + 1
+    def test_get_avail_images_in_range6(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:59', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = []
+        for t in self.conn._datetime_range(start, end):
+            scan_times_artificial += [datetime.strftime(t, '%m-%d-%Y-%H:%M')] * 3
+        scan_times_artificial.append('05-23-2019-13:00')
+
+        images = self.conn.get_avail_images_in_range('goes16', 'glm',
+                                                     '05-23-2019-12:00',
+                                                     '05-23-2019-12:59'
+                                                     )
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time[:-3])
+
+        self.assertEqual(len(images), self.conn._calc_num_glm_files(59))
+        self.assertEqual(scan_times_artificial, scan_times_true)
+
+
+
+    # Test valid params for GLM
+    # length = (3 * (num_mins + 1)) + 1
+    def test_get_avail_images_in_range7(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-14:00', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = []
+        for t in self.conn._datetime_range(start, end):
+            scan_times_artificial += [datetime.strftime(t, '%m-%d-%Y-%H:%M')] * 3
+        scan_times_artificial.append('05-23-2019-14:01')
+
+        images = self.conn.get_avail_images_in_range('goes16', 'glm',
+                                                     '05-23-2019-12:00',
+                                                     '05-23-2019-14:00'
+                                                     )
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time[:-3])
+
+        self.assertEqual(len(images), self.conn._calc_num_glm_files(120))
+        self.assertEqual(scan_times_artificial, scan_times_true)
+
+
+
 
 
 
