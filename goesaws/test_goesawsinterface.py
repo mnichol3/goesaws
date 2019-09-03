@@ -473,7 +473,171 @@ class TestGoesAwsInterface(unittest.TestCase):
     ############################# get_avail_imagess #############################
 
 
+    # Test invalid satellite param
+    def test_get_avail_images1(self):
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('wrong', 'abi', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
 
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('wrong', 'glm', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('g16', 'abi', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('g17', 'glm', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid satellite parameter' in context.exception)
+
+
+
+    # Test invalid sensor param
+    def test_get_avail_images2(self):
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'wrong', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid sensor parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abb', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid sensor parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'gim', '05-23-2019',
+                                                product=None, sector=None, channel=None)
+            self.assertTrue('Invalid sensor parameter' in context.exception)
+
+
+
+    # Test invalid sector param for ABI
+    def test_get_avail_images3(self):
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                                product='ABI-L1b-RadC', sector=None,
+                                                channel=None)
+            self.assertTrue('Must provide sector parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                                product='ABI-L1b-RadC', sector='M3',
+                                                channel=None)
+            self.assertTrue('Must provide sector parameter' in context.exception)
+
+
+
+    # Test invalid product params
+    def test_get_avail_images4(self):
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                                product='ABI-L1-RadC', sector='C',
+                                                channel='13')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                                product='ABI-L1c-RadC', sector='C',
+                                                channel='13')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+        with self.assertRaises(Exception) as context:
+            images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                                product='ABI-L2-RadC', sector='C',
+                                                channel='13')
+            self.assertTrue('Invalid product parameter' in context.exception)
+
+
+
+    # Test valid params for ABI
+    def test_get_avail_images5(self):
+        scan_times_artificial = ['05-23-2019-12:01', '05-23-2019-12:06', '05-23-2019-12:11',
+                                  '05-23-2019-12:16', '05-23-2019-12:21', '05-23-2019-12:26',
+                                  '05-23-2019-12:31', '05-23-2019-12:36', '05-23-2019-12:41',
+                                  '05-23-2019-12:46', '05-23-2019-12:51', '05-23-2019-12:56']
+
+        images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                            product='ABI-L1b-RadC', sector='C',
+                                            channel='13')
+        self.assertEqual(len(images), 12)
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time)
+
+        self.assertEqual(scan_times_true, scan_times_artificial)
+
+
+
+    # Test valid params for ABI
+    def test_get_avail_images6(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:59', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = [datetime.strftime(x, '%m-%d-%Y-%H:%M') for x in self.conn._datetime_range(start, end)]
+
+        images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
+                                            product='ABI-L1b-RadM', sector='M1',
+                                            channel='13')
+        self.assertEqual(len(images), 60)
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time)
+
+        self.assertEqual(scan_times_true, scan_times_artificial)
+
+
+
+    # Test valid params for GLM
+    def test_get_avail_images7(self):
+        start = datetime.strptime('05-23-2019-12:00', '%m-%d-%Y-%H:%M')
+        end = datetime.strptime('05-23-2019-12:59', '%m-%d-%Y-%H:%M')
+        scan_times_artificial = []
+        for t in self.conn._datetime_range(start, end):
+            scan_times_artificial += [datetime.strftime(t, '%m-%d-%Y-%H:%M')] * 3
+
+        images = self.conn.get_avail_images('goes16', 'glm', '05-23-2019-12')
+
+        scan_times_true = []
+        for img in images:
+            scan_times_true.append(img.scan_time[:-3])
+
+        self.assertEqual(len(images), 180)
+        self.assertEqual(scan_times_true, scan_times_artificial)
+
+
+
+    def test_validate_product1(self):
+        output = self.conn._validate_product('ABI-L1b-RadC')
+        self.assertTrue(output)
+
+        output = self.conn._validate_product('ABI-L1b-Rad')
+        self.assertTrue(output)
+
+        output = self.conn._validate_product('ABI-L2-CMIPM')
+        self.assertTrue(output)
+
+        output = self.conn._validate_product('ABI-L2-CMIPC')
+        self.assertTrue(output)
+
+        output = self.conn._validate_product('ABI-L2-CMIP')
+        self.assertTrue(output)
+
+        output = self.conn._validate_product('GLM-L2-LCFA')
+        self.assertTrue(output)
 
 
 if __name__ == '__main__':
