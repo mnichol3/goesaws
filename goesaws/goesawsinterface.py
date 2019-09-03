@@ -43,7 +43,6 @@ class GoesAWSInterface(object):
                         format='%(levelname)s: %(asctime)s: %(module)s.%(funcName)s, line %(lineno)d:\n\t%(message)s',
                         filemode='w')
 
-    logging.info("File created")
 
     def __init__(self):
         super(GoesAWSInterface, self).__init__()
