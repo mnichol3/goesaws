@@ -984,6 +984,12 @@ class GoesAWSInterface(object):
 
 
 
+    def _calc_num_glm_files(self, num_mins):
+        num_files = (3 * (num_mins + 1)) + 1
+        return num_files
+
+
+
 class GoesAwsDownloadError(Exception):
     def __init__(self, message, awsgoesfile):
         super(GoesAwsDownloadError, self).__init__(message)
