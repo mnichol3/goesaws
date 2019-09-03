@@ -136,8 +136,8 @@ class GoesAWSInterface(object):
 
         if (sensor == 'abi'):
             prefix = self._build_prefix_abi(product=product, sector=sector)
-            if (product is None or sector is None):
-                print('Warning: product/sector parameter is NoneType')
+            # if (product is None or sector is None):
+            #     print('Warning: product/sector parameter is NoneType')
         elif (sensor == 'glm'):
             prefix = self._build_prefix_glm()
         else:
