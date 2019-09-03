@@ -69,6 +69,8 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
+        sensor : str, optional
+            Sensor that produced the data. Valid: 'abi' or 'glm'. Default = None
 
         Returns
         -------
@@ -117,8 +119,13 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -166,10 +173,15 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         year : str or int
             Year to fetch the available months for
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -194,10 +206,15 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         year : str or int
             Year to fetch the available months for
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
@@ -246,10 +263,16 @@ class GoesAWSInterface(object):
         satellite : str
             The satellite to fetch available products for.
             Valid: 'goes16' & 'goes17'
-        product : str
-            Imagery product to retrieve available data for
+        sensor : str
+            Sensor that produced the data. Valid: 'abi' or 'glm'
         date : str
-            Date of the data. Format: MM-DD-YYYY
+            Date of the desired imagery/data.
+            Format: MM-DD-YYYY
+        product : str, optional
+            Imagery product. Required when pulling ABI data. Default: None
+        sector : str, optional
+            Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
+            Required to pull ABI data. Default = None
 
         Returns
         -------
