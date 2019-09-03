@@ -351,6 +351,9 @@ class GoesAWSInterface(object):
         if (not isinstance(date, datetime)):
             date = datetime.strptime(date, '%m-%d-%Y-%H')
 
+        if (sensor != 'glm' and not self._validate_product(product)):
+            raise ValueError('Invalid product parameter')
+
         year = date.year
         hour = date.hour
         jul_day = date.timetuple().tm_yday
@@ -370,6 +373,11 @@ class GoesAWSInterface(object):
 
             resp = self._get_sat_bucket(satellite, prefix)
 
+            if ('Contents' not in list(resp.keys())):
+                logger = logging.getLogger(__name__)
+                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
+                raise KeyError("'Contents' not in AWS response")
+
             for each in list(resp['Contents']):
 
                 match = scan_re.search(each['Key'])
@@ -385,6 +393,11 @@ class GoesAWSInterface(object):
             prefix = self._build_prefix_glm(year=year, julian_day=jul_day, hour=hour)
 
             resp = self._get_sat_bucket(satellite, prefix)
+
+            if ('Contents' not in list(resp.keys())):
+                logger = logging.getLogger(__name__)
+                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
+                raise KeyError("'Contents' not in AWS response")
 
             for each in list(resp['Contents']):
 
@@ -901,6 +914,17 @@ class GoesAWSInterface(object):
             return list(dates)
         else:
             return dates
+
+
+
+    def _validate_product(self, product):
+        valid_prods = ['ABI-L1b-Rad', 'ABI-L2-CMIP', 'ABI-L2-FDC',
+                       'ABI-L2-MCMIP', 'GLM-L2-LCFA']
+
+        if (product in valid_prods or product[:-1] in valid_prods):
+            return True
+        else:
+            return False
 
 
 
