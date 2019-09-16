@@ -7,6 +7,19 @@ AWS bucket to be easily and quickly found, downloaded, and processed.
 
 For example usage, see ReadMe
 https://github.com/mnichol3/goesaws
+
+Notes
+-----
+
+* 16 Sep 2019
+    - Valid ABI products:
+        - Without sector suffix:
+            'ABI-L1b-Rad', 'ABI-L2-CMIP', 'ABI-L2-FDC', 'ABI-L2-MCMIP'
+        - With sector suffix:
+            'ABI-L1b-RadC', 'ABI-L1b-RadF', 'ABI-L1b-RadM',
+            'ABI-L2-CMIPC', 'ABI-L2-CMIPF', 'ABI-L2-CMIPM',
+            'ABI-L2-FDCC', 'ABI-L2-FDCF', 'ABI-L2-MCMIPC',
+            'ABI-L2-MCMIPF', 'ABI-L2-MCMIPM'
 """
 import os
 import re
@@ -52,6 +65,8 @@ class GoesAWSInterface(object):
         self._scan_m_re = re.compile(r'(\w{3,4}M\d-M\dC\d{2})_G\d{2}_s\d{7}(\d{4})\d{3}')
         self._scan_c_re = re.compile(r'(\w{4,5}-M\dC\d{2})_G\d{2}_s\d{7}(\d{4})\d{3}')
         self._scan_re_glm = re.compile(r'(OR_GLM-L2-LCFA)_G\d{2}_s\d{7}(\d{6})\d{1}')
+        self._scan_re_mcmip_m = re.compile(r'(\w{3,4}M\d-M\d)_G\d{2}_s\d{7}(\d{4})\d{3}')
+        self._scan_re_mcmip_c = re.compile(r'(\w{4,5}-M\d)_G\d{2}_s\d{7}(\d{4})\d{3}')
         self._s3conn = boto3.resource('s3')
         self._s3conn.meta.client.meta.events.register('choose-signer.s3.*', disable_signing)
         self._bucket_16 = self._s3conn.Bucket('noaa-goes16')
@@ -346,6 +361,9 @@ class GoesAWSInterface(object):
                            'M1': self._scan_m_re,
                            'M2': self._scan_m_re
         }
+        mcmip_sector_dict = {'C': self._scan_re_mcmip_c,
+                             'M1': self._scan_re_mcmip_m,
+                             'M2': self._scan_re_mcmip_m}
 
         if (not isinstance(date, datetime)):
             date = datetime.strptime(date, '%m-%d-%Y-%H')
@@ -356,12 +374,16 @@ class GoesAWSInterface(object):
         year = date.year
         hour = date.hour
         jul_day = date.timetuple().tm_yday
+        trim_prod = self._trim_product_sector(product)
 
         if (sensor == 'abi'):
             try:
                 # setting the scan_re variable also acts to validate the sector
                 # parameter
-                scan_re = abi_sector_dict[sector]
+                if (trim_prod == 'MCMIP'):
+                    scan_re = mcmip_sector_dict[sector]
+                else:
+                    scan_re = abi_sector_dict[sector]
             except KeyError:
                 logger = logging.getLogger(__name__)
                 logger.error("Invalid sector parameter %s", sector)
@@ -377,15 +399,24 @@ class GoesAWSInterface(object):
                 logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
                 raise KeyError("'Contents' not in AWS response")
 
-            for each in list(resp['Contents']):
-
-                match = scan_re.search(each['Key'])
-                if (match is not None):
-                    if (sector in match.group(1) and channel in match.group(1)):
-                        time = match.group(2)
-                        dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
-                        dt = dt.strftime('%m-%d-%Y-%H:%M')
-                        images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
+            if (trim_prod == 'MCMIP'):
+                for each in list(resp['Contents']):
+                    match = scan_re.search(each['Key'])
+                    if (match is not None):
+                        if (sector in match.group(1)):
+                            time = match.group(2)
+                            dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
+                            dt = dt.strftime('%m-%d-%Y-%H:%M')
+                            images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
+            else:
+                for each in list(resp['Contents']):
+                    match = scan_re.search(each['Key'])
+                    if (match is not None):
+                        if (sector in match.group(1) and channel in match.group(1)):
+                            time = match.group(2)
+                            dt = datetime.strptime('{} {} {}'.format(year, jul_day, time), '%Y %j %H%M')
+                            dt = dt.strftime('%m-%d-%Y-%H:%M')
+                            images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
 
         elif (sensor == 'glm'):
             scan_re = self._scan_re_glm
@@ -458,16 +489,43 @@ class GoesAWSInterface(object):
         images = []
         added = []
 
-        start_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
+        curr_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
         end_dt = datetime.strptime(end, '%m-%d-%Y-%H:%M')
 
-        prev_hour = start_dt.hour
+        prev_hour = curr_dt.hour
         first = True
 
         if (sensor == 'abi'):
 
-            for day in self._datetime_range(start_dt, end_dt):
-                curr_hour = day.hour
+            # for day in self._datetime_range(start_dt, end_dt):
+            #     curr_hour = day.hour
+            #
+            #     if (prev_hour != curr_hour):
+            #         first = True
+            #
+            #     if (first):
+            #         first = False
+            #         # avail_imgs = self.get_avail_images(satellite, sensor, product, day,
+            #         #                                    sector, channel)
+            #         avail_imgs = self.get_avail_images(satellite, sensor, day,
+            #                                            product=product, sector=sector,
+            #                                            channel=channel)
+            #
+            #         for img in avail_imgs:
+            #             # if ((self._build_channel_format(channel) in img.shortfname) and
+            #             #     (sector in img.shortfname)):
+            #             img_scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')
+            #             target_fname = self._parse_partial_fname_abi(satellite, product,
+            #                                     sector, channel, img_scan_dt, prefix=False)
+            #
+            #             if (target_fname in img.filename):
+            #                 if (self._is_within_range(start_dt, end_dt, img_scan_dt)):
+            #                     if (img.shortfname not in added):
+            #                         added.append(img.shortfname)
+            #                         images.append(img)
+            #     prev_hour = curr_hour
+            while (curr_dt <= end_dt):
+                curr_hour = curr_dt.hour
 
                 if (prev_hour != curr_hour):
                     first = True
@@ -476,19 +534,24 @@ class GoesAWSInterface(object):
                     first = False
                     # avail_imgs = self.get_avail_images(satellite, sensor, product, day,
                     #                                    sector, channel)
-                    avail_imgs = self.get_avail_images(satellite, sensor, day,
+                    avail_imgs = self.get_avail_images(satellite, sensor, curr_dt,
                                                        product=product, sector=sector,
                                                        channel=channel)
 
                     for img in avail_imgs:
-                        if ((self._build_channel_format(channel) in img.shortfname) and
-                            (sector in img.shortfname)):
-                            if (self._is_within_range(start_dt, end_dt,
-                                    datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M'))):
-                                if (img.shortfname not in added):
-                                    added.append(img.shortfname)
-                                    images.append(img)
+                        target_fname = self._parse_partial_fname_abi(satellite, product,
+                                                sector, channel, curr_dt, prefix=False)
+
+                        if (target_fname in img.filename):
+                            if (img.shortfname not in added):
+                                added.append(img.shortfname)
+                                images.append(img)
+                                curr_dt += timedelta(seconds=60)
+                        if (curr_dt > end_dt):
+                            break
                 prev_hour = curr_hour
+                curr_dt += timedelta(seconds=60)
+
         elif (sensor == 'glm'):
 
             # Increment the end datetime by 1 minute as the three datafiles for
@@ -592,6 +655,10 @@ class GoesAWSInterface(object):
         -------
         prefix : str
         """
+        prod_prefix = {'RAD': 'ABI-L1b',
+                       'CMIP': 'ABI-L2',
+                       'FDC': 'ABI-L2',
+                       'MCMIP': 'ABI-L2'}
         prefix = ''
         prod2 = False
         valid_sectors = ['C', 'M1', 'M2']
@@ -606,10 +673,11 @@ class GoesAWSInterface(object):
                 raise ValueError('Sector cannont be None')
             else:
                 # Trim sector off the end of the product string, if present
-                if (product[-1] in ['C', 'F', 'M']):
-                    product = product[:-1]
+                # if (product[-1] in ['C', 'F', 'M']):
+                #     product = product[:-1]
+                product = self._trim_product_sector(product)
 
-                prefix += '{}{}/'.format(product, sector[0])
+                prefix += '{}-{}{}/'.format(prod_prefix[product.upper()], product, sector[0])
 
         if year is not None:
             prefix += self._build_year_format(year)
@@ -618,7 +686,7 @@ class GoesAWSInterface(object):
         if hour is not None:
             prefix += self._build_hour_format(hour)
         if (product is not None) and (hour is not None):
-            prefix += 'OR_{}'.format(product)
+            prefix += 'OR_{}-{}'.format(prod_prefix[product.upper()], product)
             prod2 = True
         if (sector is not None) and (prod2):
             prefix += sector
@@ -813,7 +881,7 @@ class GoesAWSInterface(object):
 
 
 
-    def _parse_partial_fname_abi(self, satellite, product, sector, channel, date):
+    def _parse_partial_fname_abi(self, satellite, product, sector, channel, date, prefix=True):
         """
         Constructs a partial filename for a GOES ABI file
 
@@ -827,26 +895,44 @@ class GoesAWSInterface(object):
             Satellite scan sector. M1 = mesoscale 1, M2 = mesoscale 2, C = CONUS
         channel : int
             ABI channel
-        date : datetime object apparently
+        date : datetime object
+        prefix : bool, optional
+            Determines whether or not to include the AWS prefix which consists of
+            the subdirectory paths. If False, only the filename will be returned.
+            Default: True
 
         Returns
         -------
         fname : str
             Partial filename of ABI file
         """
+        fname = ''
+        prod_prefix = {'RAD': 'ABI-L1b',
+                       'CMIP': 'ABI-L2',
+                       'FDC': 'ABI-L2',
+                       'MCMIP': 'ABI-L2'}
+
         if (date.year > 2018):
             mode = 'M6'
         else:
             mode = 'M3'
 
         year = str(date.year)
-        day = str(date.timetuple().tm_yday)
-        hour = str(date.hour)
-        minute = str(date.minute)
+        day = str(date.timetuple().tm_yday).zfill(3)
+        hour = str(date.hour).zfill(2)
+        minute = str(date.minute).zfill(2)
 
-        fname = 'ABI-L2-{}/{}/{}'.format(product, year, day)
-        fname += '/OR_ABI-L2-{}{}-{}'.format(product, sector, mode)
-        fname += '{}_G{}_'.format(self._build_channel_format(channel), satellite[-2:])
+        product = self._trim_product_sector(product)
+
+        if (prefix):
+            fname += '{}-{}/{}/{}/'.format(prod_prefix[product.upper()], product, year, day)
+
+        fname += 'OR_{}-{}{}-{}'.format(prod_prefix[product.upper()], product, sector, mode)
+
+        if (product == 'MCMIP'):
+            fname += '_G{}_'.format(satellite[-2:])
+        else:
+            fname += '{}_G{}_'.format(self._build_channel_format(channel), satellite[-2:])
         fname += 's{}{}{}{}'.format(year, day, hour, minute)
 
         return fname
@@ -917,13 +1003,36 @@ class GoesAWSInterface(object):
 
 
     def _validate_product(self, product):
-        valid_prods = ['ABI-L1b-Rad', 'ABI-L2-CMIP', 'ABI-L2-FDC',
-                       'ABI-L2-MCMIP', 'GLM-L2-LCFA']
+        # valid_prods = ['ABI-L1b-Rad', 'ABI-L2-CMIP', 'ABI-L2-FDC',
+        #                'ABI-L2-MCMIP', 'GLM-L2-LCFA']
+        valid_prods = ['RAD', 'CMIP', 'FDC', 'MCMIP']
 
-        if (product in valid_prods or product[:-1] in valid_prods):
+        if (product.upper() in valid_prods or product[:-1].upper() in valid_prods):
             return True
         else:
             return False
+
+
+
+    def _trim_product_sector(self, product):
+        """
+        Removes sector suffix from product string, if present
+        """
+        valid_prods = ['RAD', 'CMIP', 'FDC', 'MCMIP']
+
+        # If ABI-L.. is included, remove it
+        product = product.split('-')
+        if (len(product) > 1):
+            product = product[2]
+        else:
+            product = product[0]
+
+        if (product.upper() in valid_prods):
+            return product
+        elif (product[:-1].upper() in valid_prods):
+            return product[:-1]
+        else:
+            ValueError('Invalid Product')
 
 
 
