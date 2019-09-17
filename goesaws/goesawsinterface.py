@@ -411,6 +411,7 @@ class GoesAWSInterface(object):
             else:
                 for each in list(resp['Contents']):
                     match = scan_re.search(each['Key'])
+                    # print(each['Key'])
                     if (match is not None):
                         if (sector in match.group(1) and channel in match.group(1)):
                             time = match.group(2)
@@ -489,43 +490,16 @@ class GoesAWSInterface(object):
         images = []
         added = []
 
-        curr_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
+        start_dt = datetime.strptime(start, '%m-%d-%Y-%H:%M')
         end_dt = datetime.strptime(end, '%m-%d-%Y-%H:%M')
 
-        prev_hour = curr_dt.hour
+        prev_hour = start_dt.hour
         first = True
 
         if (sensor == 'abi'):
 
-            # for day in self._datetime_range(start_dt, end_dt):
-            #     curr_hour = day.hour
-            #
-            #     if (prev_hour != curr_hour):
-            #         first = True
-            #
-            #     if (first):
-            #         first = False
-            #         # avail_imgs = self.get_avail_images(satellite, sensor, product, day,
-            #         #                                    sector, channel)
-            #         avail_imgs = self.get_avail_images(satellite, sensor, day,
-            #                                            product=product, sector=sector,
-            #                                            channel=channel)
-            #
-            #         for img in avail_imgs:
-            #             # if ((self._build_channel_format(channel) in img.shortfname) and
-            #             #     (sector in img.shortfname)):
-            #             img_scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')
-            #             target_fname = self._parse_partial_fname_abi(satellite, product,
-            #                                     sector, channel, img_scan_dt, prefix=False)
-            #
-            #             if (target_fname in img.filename):
-            #                 if (self._is_within_range(start_dt, end_dt, img_scan_dt)):
-            #                     if (img.shortfname not in added):
-            #                         added.append(img.shortfname)
-            #                         images.append(img)
-            #     prev_hour = curr_hour
-            while (curr_dt <= end_dt):
-                curr_hour = curr_dt.hour
+            for day in self._datetime_range(start_dt, end_dt):
+                curr_hour = day.hour
 
                 if (prev_hour != curr_hour):
                     first = True
@@ -534,23 +508,21 @@ class GoesAWSInterface(object):
                     first = False
                     # avail_imgs = self.get_avail_images(satellite, sensor, product, day,
                     #                                    sector, channel)
-                    avail_imgs = self.get_avail_images(satellite, sensor, curr_dt,
+                    avail_imgs = self.get_avail_images(satellite, sensor, day,
                                                        product=product, sector=sector,
                                                        channel=channel)
 
                     for img in avail_imgs:
+                        img_scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')
                         target_fname = self._parse_partial_fname_abi(satellite, product,
-                                                sector, channel, curr_dt, prefix=False)
+                                                sector, channel, img_scan_dt, prefix=False)
 
                         if (target_fname in img.filename):
-                            if (img.shortfname not in added):
-                                added.append(img.shortfname)
-                                images.append(img)
-                                curr_dt += timedelta(seconds=60)
-                        if (curr_dt > end_dt):
-                            break
+                            if (self._is_within_range(start_dt, end_dt, img_scan_dt)):
+                                if (img.shortfname not in added):
+                                    added.append(img.shortfname)
+                                    images.append(img)
                 prev_hour = curr_hour
-                curr_dt += timedelta(seconds=60)
 
         elif (sensor == 'glm'):
 
