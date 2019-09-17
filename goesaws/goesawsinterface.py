@@ -513,15 +513,16 @@ class GoesAWSInterface(object):
                                                        channel=channel)
 
                     for img in avail_imgs:
-                        img_scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')
-                        target_fname = self._parse_partial_fname_abi(satellite, product,
-                                                sector, channel, img_scan_dt, prefix=False)
+                        scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M')
 
-                        if (target_fname in img.filename):
-                            if (self._is_within_range(start_dt, end_dt, img_scan_dt)):
-                                if (img.shortfname not in added):
-                                    added.append(img.shortfname)
-                                    images.append(img)
+                        if (self._is_within_range(start_dt, end_dt, scan_dt) == 0):
+                            if (img.shortfname not in added):
+                                added.append(img.shortfname)
+                                images.append(img)
+                        elif (self._is_within_range(start_dt, end_dt, scan_dt) == 1):
+                            # If the current scan time has surpassed the end
+                            # of the desired time span
+                            break
                 prev_hour = curr_hour
 
         elif (sensor == 'glm'):
@@ -542,11 +543,15 @@ class GoesAWSInterface(object):
                     avail_imgs = self.get_avail_images(satellite, sensor, day)
 
                     for img in avail_imgs:
-                        if (self._is_within_range(start_dt, end_dt,
-                                datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M:%S'))):
+                        scan_dt = datetime.strptime(img.scan_time, '%m-%d-%Y-%H:%M:%S')
+                        if (self._is_within_range(start_dt, end_dt, scan_dt) == 0):
                             if (img.shortfname not in added):
                                 added.append(img.shortfname)
                                 images.append(img)
+                        elif (self._is_within_range(start_dt, end_dt, scan_dt) == 1):
+                            # If the current scan time has surpassed the end
+                            # of the desired time span
+                            break
                 prev_hour = curr_hour
         else:
             logger = logging.getLogger(__name__)
@@ -841,21 +846,38 @@ class GoesAWSInterface(object):
 
         Parameters
         ----------
+        start : datetime object
+            Datetime that defines the beginning of the time period
+        end : datetime object
+            Datetime that defines the ending of the time period
+        value : datetime object
+            Datetime to evaluate
 
         Returns
         -------
-        boolean
+        int
+            -1 if value < start and value < end,
+             0 if value >= start and value <= end,
+             1 if value > start and value > end
         """
-        if value >= start and value <= end:
-            return True
-        else:
-            return False
+        # if value >= start and value <= end:
+        #     return True
+        # else:
+        #     return False
+        if (value < start and value < end):
+            return -1
+        elif (value >= start and value <= end):
+            return 0
+        elif (value > start and value > end):
+            return 1
 
 
 
     def _parse_partial_fname_abi(self, satellite, product, sector, channel, date, prefix=True):
         """
-        Constructs a partial filename for a GOES ABI file
+        Constructs a partial filename for a GOES ABI file with a regular expression
+        for the scan mode number.
+        Ex: OR_ABI-L2-CMIPM1-M\dC13_G16_s20192591600
 
         Parameters
         ----------
@@ -884,11 +906,6 @@ class GoesAWSInterface(object):
                        'FDC': 'ABI-L2',
                        'MCMIP': 'ABI-L2'}
 
-        if (date.year > 2018):
-            mode = 'M6'
-        else:
-            mode = 'M3'
-
         year = str(date.year)
         day = str(date.timetuple().tm_yday).zfill(3)
         hour = str(date.hour).zfill(2)
@@ -899,7 +916,7 @@ class GoesAWSInterface(object):
         if (prefix):
             fname += '{}-{}/{}/{}/'.format(prod_prefix[product.upper()], product, year, day)
 
-        fname += 'OR_{}-{}{}-{}'.format(prod_prefix[product.upper()], product, sector, mode)
+        fname += 'OR_{}-{}{}-M\d'.format(prod_prefix[product.upper()], product, sector)
 
         if (product == 'MCMIP'):
             fname += '_G{}_'.format(satellite[-2:])
