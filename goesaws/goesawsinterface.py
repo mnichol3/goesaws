@@ -8,6 +8,9 @@ AWS bucket to be easily and quickly found, downloaded, and processed.
 For example usage, see ReadMe
 https://github.com/mnichol3/goesaws
 
+For more information on NOAA's Amazon S3 bucket, see:
+https://docs.opendata.aws/noaa-goes16/cics-readme.html
+
 Notes
 -----
 
