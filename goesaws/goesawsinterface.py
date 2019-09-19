@@ -377,9 +377,9 @@ class GoesAWSInterface(object):
         year = date.year
         hour = date.hour
         jul_day = date.timetuple().tm_yday
-        trim_prod = self._trim_product_sector(product)
 
         if (sensor == 'abi'):
+            trim_prod = self._trim_product_sector(product)
             try:
                 # setting the scan_re variable also acts to validate the sector
                 # parameter
