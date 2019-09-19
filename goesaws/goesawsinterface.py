@@ -556,6 +556,10 @@ class GoesAWSInterface(object):
                             # of the desired time span
                             break
                 prev_hour = curr_hour
+
+            # Remove the last file since it contains data from beyond the desired
+            # time spand     
+            images = images[:-1]
         else:
             logger = logging.getLogger(__name__)
             logger.error("Invalid sensor parameter %s", sensor)
