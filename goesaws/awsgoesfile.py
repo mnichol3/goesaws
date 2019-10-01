@@ -25,7 +25,7 @@ class AwsGoesFile(object):
 
     def _create_filepath(self, basepath, keep_aws_structure):
         if keep_aws_structure:
-            directorypath = os.path.join(basepath, self.awspath)
+            directorypath = os.path.join(basepath, self.awspath.split('/', 1)[1])
             filepath = os.path.join(directorypath, self.filename)
         else:
             directorypath = basepath
