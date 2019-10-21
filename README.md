@@ -1,7 +1,7 @@
 # goesaws
 
 
-This module is based on Aaron Anderson's [nexradaws module](https://github.com/aarande/nexradaws) and allows you to query and download GOES-16 and GOES-17 Advanced Baseline Imager (ABI) imagery hosted on NOAA's GOES Amazon Web Services S3 storage from the command line. 
+This module is based on Aaron Anderson's [nexradaws module](https://github.com/aarande/nexradaws) and allows you to query and download GOES-16 and GOES-17 Advanced Baseline Imager (ABI) imagery hosted on NOAA's GOES Amazon Web Services S3 storage from the command line.
 
 Supports Python 3.6
 
@@ -10,11 +10,11 @@ Supports Python 3.6
   * Boto3
   * botocore
   * pytz
-  
+
 ### Example Usage
 #### Advanced Baseline Imager (ABI) files
 ```shell
-python goes_aws_dl.py --start '08-06-2019-15:00' --end '08-06-2019-15:11' -p 'CMIP' --sector 'M2' --chan '02' -dl -o 'download/files/here'
+python goesaws.py --start '08-06-2019-15:00' --end '08-06-2019-15:11' -p 'CMIP' --sector 'M2' --chan '02' -dl -o 'download/files/here'
 ```
 
 Output:
@@ -58,7 +58,7 @@ Downloaded OR_ABI-L2-CMIPM2-M6C13_G16_s20192181510281_e20192181510354_c201921815
 ```
 #### Geostationary Lightning Mapper (GLM) files
 ```shell
-python goes_aws_dl.py -i 'glm' --start '09-01-2019-16:00' --end '09-01-2019-16:30' -dl -o 'path/to/download'
+python goesaws.py -i 'glm' --start '09-01-2019-16:00' --end '09-01-2019-16:30' -dl -o 'path/to/download'
 ```
 
 More usage examples can be found in ```goesaws.py```
@@ -94,7 +94,7 @@ More usage examples can be found in ```goesaws.py```
   - Satellite to pull data from.
     Default is 'goes16'. Stored as args.sat
 - ```--start```
-  - Start datetime string. Format: MM-DD-YYYY-HH:MM (UTC). 
+  - Start datetime string. Format: MM-DD-YYYY-HH:MM (UTC).
     Stored at args.start
 ## License
 
