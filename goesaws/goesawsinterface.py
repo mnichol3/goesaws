@@ -29,8 +29,6 @@ import re
 import sys
 from datetime import timedelta, datetime
 
-import logging
-
 import boto3
 import errno
 import pytz
