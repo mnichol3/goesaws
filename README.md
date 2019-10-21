@@ -1,41 +1,22 @@
 # goesaws
 
-THIS IS A WORK IN PROGRESS
 
-This module is based on Aaron Anderson's [nexradaws module](https://github.com/aarande/nexradaws) and allows you to query and download GOES-16 and GOES-17 Advanced Baseline Imager (ABI) imagery hosted on NOAA's GOES Amazon Web Services S3 storage. 
+This module is based on Aaron Anderson's [nexradaws module](https://github.com/aarande/nexradaws) and allows you to query and download GOES-16 and GOES-17 Advanced Baseline Imager (ABI) imagery hosted on NOAA's GOES Amazon Web Services S3 storage from the command line. 
 
-Supports Python 3.6, untested on Python 2.7
+Supports Python 3.6
 
 ### Dependencies
 * Python 3.6
   * Boto3
   * botocore
   * pytz
-  * six
   
 ### Example Usage
-```python
-import goesawsinterface
-
-local_abi_path = 'download/files/here'
-
-conn = goesawsinterface.GoesAWSInterface()
-
-# Returns a list of AWSGoesFile objects with scan times occuring in the period of 8-6-2019-15:00z 
-# to 8-6-2019-16:30z. 
-imgs = conn.get_avail_images_in_range('goes16', 'ABI-L2-CMIP', '8-6-2019-15:00', '8-6-2019-15:10', 'M2', '13')
-
-# Print the scan times and names of the AWSGoesFile objects
-for img in imgs:
-    print('{} --> {}'.format(img.scan_time, img.filename)
-
-# Download the ABI files to the directory specified in 'local_abi_path'
-result = conn.download('goes16', imgs, local_abi_path, keep_aws_folders=False, threads=6)
-
-# Print the local paths & filenames of the successfully downloaded files
-for x in results._successfiles:
-    print(x.filepath)
+#### Advanced Baseline Imager (ABI) files
+```shell
+python goes_aws_dl.py --start '08-06-2019-15:00' --end '08-06-2019-15:11' -p 'CMIP' --sector 'M2' --chan '02' -dl -o 'download/files/here'
 ```
+
 Output:
 ```
 08-06-2019-15:00 --> OR_ABI-L2-CMIPM2-M6C13_G16_s20192181500281_e20192181500352_c20192181500415.nc
@@ -75,8 +56,46 @@ Downloaded OR_ABI-L2-CMIPM2-M6C13_G16_s20192181510281_e20192181510354_c201921815
 /download/files/here/OR_ABI-L2-CMIPM2-M6C13_G16_s20192181509281_e20192181509351_c20192181509417.nc
 /download/files/here/OR_ABI-L2-CMIPM2-M6C13_G16_s20192181510281_e20192181510354_c20192181510415.nc
 ```
+#### Geostationary Lightning Mapper (GLM) files
+```shell
+python goes_aws_dl.py -i 'glm' --start '09-01-2019-16:00' --end '09-01-2019-16:30' -dl -o 'path/to/download'
+```
 
+More usage examples can be found in ```goesaws.py```
 
+### Command Line Arguments
+- ```-c```, ```--chan``` (optional; required for ABI files)
+  - ABI imagery channel.
+    Default is None. Stored as args.channel
+- ```-d```, ```--dl``` (optional; required to dowlnoad files)
+  - File download flag
+    Default is False. Stored as args.dl
+- ```--end```
+  - End datetime string. Format: MM-DD-YYYY-HH:MM (UTC)
+    Stored at args.end
+- ```-i```, ```--instr``` (optional)
+  - Instrument to pull data from ('abi' or 'glm')
+    Default is 'abi'. Stored as args.instr
+- ```--kill_aws_struct``` (optional)
+  - If passed (False), the files will be downloaded directly into the directory
+    specified by out_dir. If not passed (True), the files will be downloaded
+    to out_dir/year/day_of_year/hour
+    Default is False. Stored as args.kill_aws_struct
+- ```-o```, ```--out_dir``` (optional; required to dowlnoad files).
+  - Directory to download files to
+    Stored as args.out_dir
+- ```-p```, ```--prod``` (optional; required for ABI files)
+  - ABI imagery product
+    Default is None. Stored as args.prod
+- ```-s```, ```--sector``` (optional; required for ABI files).
+  - ABI scan sector
+    Default is None. Stored as args.sector
+- ```--sat``` (optional)
+  - Satellite to pull data from.
+    Default is 'goes16'. Stored as args.sat
+- ```--start```
+  - Start datetime string. Format: MM-DD-YYYY-HH:MM (UTC). 
+    Stored at args.start
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
