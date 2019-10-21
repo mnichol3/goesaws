@@ -35,9 +35,9 @@ import pytz
 from botocore.handlers import disable_signing
 import concurrent.futures
 
-from .resources.awsgoesfile import AwsGoesFile
-from .resources.downloadresults import DownloadResults
-from .resources.localgoesfile import LocalGoesFile
+from awsgoesfile import AwsGoesFile
+from downloadresults import DownloadResults
+from localgoesfile import LocalGoesFile
 
 class GoesAWSInterface(object):
     """
