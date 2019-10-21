@@ -34,7 +34,6 @@ import logging
 import boto3
 import errno
 import pytz
-import six
 from botocore.handlers import disable_signing
 import concurrent.futures
 
@@ -50,14 +49,6 @@ class GoesAWSInterface(object):
     >>> import goesaws
     >>> conn = goesaws.GoesAwsInterface()
     """
-    try:
-        os.remove('error.log')
-    except OSError:
-        pass
-
-    logging.basicConfig(filename='error.log', level=logging.INFO,
-                        format='%(levelname)s: %(asctime)s: %(module)s.%(funcName)s, line %(lineno)d:\n\t%(message)s',
-                        filemode='w')
 
 
     def __init__(self):
@@ -119,8 +110,6 @@ class GoesAWSInterface(object):
                 for x in resp.get('CommonPrefixes'):
                     prods.append(x['Prefix'][:-1])
             else:
-                logger = logging.getLogger(__name__)
-                logger.error("Invalid sensor parameter %s", sensor)
                 raise ValueError("Invalid sensor parameter. Must be 'abi', 'glm', or None")
 
         return prods
@@ -159,16 +148,11 @@ class GoesAWSInterface(object):
         elif (sensor == 'glm'):
             prefix = self._build_prefix_glm()
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid sensor parameter %s", sensor)
             raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
 
         resp = self._get_sat_bucket(satellite, prefix)
 
         if (resp.get('CommonPrefixes') is None):
-            logger = logging.getLogger(__name__)
-            logger.error("AWS response is None. Product: {}, Sector: {}, Prefix: {}".format(
-                    product, sector, prefix))
             raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
@@ -250,15 +234,11 @@ class GoesAWSInterface(object):
         elif (sensor == 'glm'):
             prefix = self._build_prefix_glm(year=year)
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid sensor parameter %s", sensor)
             raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
 
         resp = self._get_sat_bucket(satellite, prefix)
 
         if (resp.get('CommonPrefixes') is None):
-            logger = logging.getLogger(__name__)
-            logger.error("AWS response is None. Product: {}, Sector: {}".format(product, sector))
             raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
@@ -303,23 +283,17 @@ class GoesAWSInterface(object):
 
         if (sensor == 'abi'):
             if (product is None or sector is None):
-                logger = logging.getLogger(__name__)
-                logger.error("Invalid product and/or sector parameter (NoneType). Product: {}, Sector: {}".format(product, sector))
                 raise ValueError("Invalid product and/or sector parameter (NoneType)")
             else:
                 prefix = self._build_prefix_abi(product=product, sector=sector, year=year, julian_day=jul_day)
         elif (sensor == 'glm'):
             prefix = self._build_prefix_glm(year=year, julian_day=jul_day)
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid sensor parameter %s", sensor)
             raise ValueError("Invalid sensor parameter. Must be 'abi' or 'glm'")
 
         resp = self._get_sat_bucket(satellite, prefix)
 
         if (resp.get('CommonPrefixes') is None):
-            logger = logging.getLogger(__name__)
-            logger.error("AWS response is None. Product: {}, Sector: {}".format(product, sector))
             raise TypeError('AWS response is None. Ensure product & sector params are valid')
 
         for each in resp.get('CommonPrefixes'):
@@ -388,8 +362,6 @@ class GoesAWSInterface(object):
                 else:
                     scan_re = abi_sector_dict[sector]
             except KeyError:
-                logger = logging.getLogger(__name__)
-                logger.error("Invalid sector parameter %s", sector)
                 raise ValueError("Must provide sector parameter ('M1', 'M2', or 'C') when accessing ABI data")
 
             prefix = self._build_prefix_abi(product=product, year=year, julian_day=jul_day,
@@ -398,8 +370,6 @@ class GoesAWSInterface(object):
             resp = self._get_sat_bucket(satellite, prefix)
 
             if ('Contents' not in list(resp.keys())):
-                logger = logging.getLogger(__name__)
-                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
                 raise KeyError("'Contents' not in AWS response")
 
             if (trim_prod == 'MCMIP'):
@@ -429,8 +399,6 @@ class GoesAWSInterface(object):
             resp = self._get_sat_bucket(satellite, prefix)
 
             if ('Contents' not in list(resp.keys())):
-                logger = logging.getLogger(__name__)
-                logger.error("KeyError: 'Contents' not in AWS response. Product: {}. Sector: {}. Channel: {}", product, sector, channel)
                 raise KeyError("'Contents' not in AWS response")
 
             for each in list(resp['Contents']):
@@ -443,8 +411,6 @@ class GoesAWSInterface(object):
                         images.append(AwsGoesFile(each['Key'], '{} {}'.format(match.group(1), dt), dt))
 
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid sensor parameter %s", sensor)
             raise ValueError("Invalid sensor parameter, must be 'abi' or 'glm'")
 
         return images
@@ -558,7 +524,7 @@ class GoesAWSInterface(object):
                 prev_hour = curr_hour
 
             # Remove the last file since it contains data from beyond the desired
-            # time spand     
+            # time spand
             images = images[:-1]
         else:
             logger = logging.getLogger(__name__)
@@ -608,7 +574,7 @@ class GoesAWSInterface(object):
                 try:
                     result = future.result()
                     localfiles.append(result)
-                    six.print_("Downloaded {}".format(result.filename))
+                    print("Downloaded {}".format(result.filename))
                 except GoesAwsDownloadError:
                     error = future.exception()
                     errors.append(error.awsgoesfile)
@@ -616,9 +582,9 @@ class GoesAWSInterface(object):
         # Sort returned list of LocalGoesFile objects by the scan_time
         localfiles.sort(key=lambda x:x.scan_time)
         downloadresults = DownloadResults(localfiles,errors)
-        six.print_('{} out of {} files downloaded...{} errors'.format(downloadresults.success_count,
-                                                                      downloadresults.total,
-                                                                      downloadresults.failed_count))
+        print('{} out of {} files downloaded...{} errors'.format(downloadresults.success_count,
+                                                                 downloadresults.total,
+                                                                 downloadresults.failed_count))
         return downloadresults
 
 
@@ -652,8 +618,6 @@ class GoesAWSInterface(object):
 
         if product is not None:
             if (sector is None):
-                logger = logging.getLogger(__name__)
-                logger.error("Invalid sensor parameter 'None'")
                 raise ValueError('Sector cannont be None')
             else:
                 # Trim sector off the end of the product string, if present
@@ -724,8 +688,6 @@ class GoesAWSInterface(object):
         elif (isinstance(year, str)):
             return '{}/'.format(year)
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid year parameter type %s", type(year).__name__)
             raise TypeError('Year must be of type int or str')
 
 
@@ -748,8 +710,6 @@ class GoesAWSInterface(object):
         elif isinstance(jd, str):
             return '{}/'.format(jd)
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid month parameter type %s", type(month).__name__)
             raise TypeError('Month must be int or str type')
 
 
@@ -771,8 +731,6 @@ class GoesAWSInterface(object):
         elif isinstance(hour, str):
             return '{}/'.format(hour)
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid hour parameter type %s", type(hour).__name__)
             raise TypeError('Hour must be int or str type')
 
 
@@ -828,8 +786,6 @@ class GoesAWSInterface(object):
         elif (satellite == 'goes17'):
             resp = self._bucket_17.meta.client.list_objects_v2(Bucket='noaa-goes17', Prefix=prefix, Delimiter='/')
         else:
-            logger = logging.getLogger(__name__)
-            logger.error("Invalid satellite parameter type %s", satellite)
             raise ValueError("Invalid satallite parameter. Must be either 'goes16' or 'goes17'")
 
         return resp
@@ -1072,16 +1028,12 @@ class GoesAWSInterface(object):
                 elif (satellite == 'goes17'):
                     bucket = 'noaa-goes17'
                 else:
-                    logger = logging.getLogger(__name__)
-                    logger.error("Invalid satellite parameter type %s", satellite)
                     raise ValueError("Invalid satellite parameter. Must be 'goes16' or 'goes17'")
 
                 s3.download_file(bucket, awsgoesfile.key, filepath)
                 return LocalGoesFile(awsgoesfile, filepath)
             except:
                 message = 'Download failed for {}'.format(awsgoesfile.shortfname)
-                logger = logging.getLogger(__name__)
-                logger.error("Failed to download %s", awsgoesfile.shortfname)
                 raise GoesAwsDownloadError(message, awsgoesfile)
         else:
             return LocalGoesFile(awsgoesfile, filepath)
