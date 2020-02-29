@@ -20,37 +20,25 @@ class DownloadResults(object):
         self._successfiles = localfiles
         self._failedfiles = failedfiles
 
-
-
     @property
     def failed_count(self):
         return len(self._failedfiles)
-
-
 
     @property
     def success_count(self):
         return len(self._successfiles)
 
-
-
     @property
     def total(self):
         return self.success_count + self.failed_count
-
-
 
     @property
     def success(self):
         return self._successfiles
 
-
-
     @property
     def failed(self):
         return self._failedfiles
-
-
 
     def iter_success(self):
         """
@@ -60,8 +48,6 @@ class DownloadResults(object):
         """
         for awsgoesfile in self.success:
             yield awsgoesfile
-
-
 
     def iter_failed(self):
         """

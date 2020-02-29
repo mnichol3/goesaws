@@ -12,6 +12,5 @@ class LocalGoesFile(object):
         self.scan_time = awsgoesfile.scan_time
         self.filepath = localfilepath
 
-
     def __repr__(self):
         return '<LocalGoesFile object - {}>'.format(self.filepath)

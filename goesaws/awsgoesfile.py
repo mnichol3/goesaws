@@ -16,12 +16,8 @@ class AwsGoesFile(object):
         if self.key is not None:
             self._parse_key()
 
-
-
     def _parse_key(self):
         self.awspath, self.filename = os.path.split(self.key)
-
-
 
     def _create_filepath(self, basepath, keep_aws_structure):
         if keep_aws_structure:
@@ -30,11 +26,7 @@ class AwsGoesFile(object):
         else:
             directorypath = basepath
             filepath = os.path.join(basepath, self.filename)
-
         return directorypath,filepath
-
-
-
 
     def __repr__(self):
         return '<AwsGoesFile object - {}>'.format(self.shortfname)

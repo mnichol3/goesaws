@@ -99,9 +99,7 @@ def create_arg_parser():
 
     parser.add_argument('--kill_aws_struct', dest='kill_aws_struct',
                         action='store_false', help='Keep AWS directory structure')
-
     return parser
-
 
 
 def main():
@@ -120,7 +118,6 @@ def main():
     if (args.dl and args.out_dir):
         result = conn.download('goes16', imgs, args.out_dir, keep_aws_folders=args.kill_aws_struct,
                                threads=6)
-
         for x in result._successfiles:
             print(x.filepath)
 
