@@ -1,20 +1,8 @@
 """
-Author: Matt Nicholson
-
 Command line wrapper for the GOESAws package
 
-Example usage
--------------
-
-> python goes_aws_dl.py --sat 'goes16' -i 'abi' --start '09-01-2019-00:00' --end '09-01-2019-00:15' -p 'CMIP' --sector 'C' --chan '02'
-> python goes_aws_dl.py --start '09-01-2019-00:00' --end '09-01-2019-00:15' -p 'CMIP' --sector 'M1' --chan '02'
-> python goes_aws_dl.py --start '09-01-2019-00:00' --end '09-01-2019-00:15' -p 'CMIP' --sector 'M1' --chan '02' -dl -o 'path/to/download'
-> python goes_aws_dl.py --start '09-01-2019-00:00' --end '09-01-2019-00:15' -p 'MCMIP' --sector 'C' -dl -o 'path/to/download'
-> python goes_aws_dl.py --start '09-01-2019-00:00' --end '09-01-2019-00:15' -p 'MCMIP' --sector 'C' -dl -o 'path/to/download' --kill_aws_struct
-
-GLM:
-> python goes_aws_dl.py -i 'glm' --start '09-01-2019-16:00' --end '09-01-2019-16:30'
-> python goes_aws_dl.py -i 'glm' --start '09-01-2019-16:00' --end '09-01-2019-16:30' -dl -o 'path/to/download'
+Author: Matt Nicholson
+Last updated: 29 Feb 2020
 """
 
 import argparse
@@ -30,63 +18,29 @@ def create_arg_parser():
     Command line argument parser
 
     Arguments
-        -c, --chan; optional (required for ABI files)
-            ABI imagery channel
-            Default is None. Stored as args.channel
-        -d, --dl; optional (required to dowlnoad files)
-            File download flag
-            Default is False. Stored as args.dl
+        --start
+            Start datetime string. Format: MM-DD-YYYY-HH:MM (UTC)
+            Stored at args.start
         --end
             End datetime string. Format: MM-DD-YYYY-HH:MM (UTC)
             Stored at args.end
-        -i, --instr; optional
-            Instrument to pull data from ('abi' or 'glm')
-            Default is 'abi'. Stored as args.instr
+        -p, --prod
+            Satellite, instrument, product, and sector to pull imagery from.
+            Stored as args.prod
+        -d, --dl; optional
+            Path to the directory to download files to. Files will only be downloaded
+            if this argument is given.
         --kill_aws_struct; optional
             If passed (False), the files will be downloaded directly into the directory
             specified by out_dir. If not passed (True), the files will be downloaded
             to out_dir/year/day_of_year/hour
             Default is False. Stored as args.kill_aws_struct
-        -o, --out_dir; optional (required to dowlnoad files)
-            Directory to download files to
-            Stored as args.out_dir
-        -p, --prod; optional (required for ABI files)
-            ABI imagery product
-            Default is None. Stored as args.prod
-        -s, --sector; optional (required for ABI files)
-            ABI scan sector
-            Default is None. Stored as args.sector
-        --sat; optional
-            Satellite to pull data from.
-            Default is 'goes16'. Stored as args.sat
-        --start
-            Start datetime string. Format: MM-DD-YYYY-HH:MM (UTC)
-            Stored at args.start
-
     """
     parser = argparse.ArgumentParser(description=parse_desc)
 
-    parser.add_argument('--sat', metavar='satellite', required=False,
-                        dest='sat', default='goes16', action='store')
-
-    parser.add_argument('-i', '--instr', metavar='instrument', required=False,
-                        dest='instr', action='store', type=str, default='abi',
-                        help='Instrument/sensor')
-
     parser.add_argument('-p', '--prod', metavar='product', required=False,
                         dest='prod', action='store', type=str, default=None,
-                        help='ABI product, e.g., CMIP, MCMIP, ...')
-
-    parser.add_argument('-c', '--chan', metavar='channel', required=False,
-                        dest='channel', action='store', type=str, help='ABI Channel as a string',
-                        default=None)
-
-    parser.add_argument('-s', '--sector', metavar='scan sector', dest='sector',
-                        action='store', type=str, default=None,
-                        help='ABI scan sector, e.g., "C", "M1", "M2"')
-
-    parser.add_argument('-o', '--output_dir', metavar='directory', dest='out_dir',
-                        required=False, type=str, action='store', help='Directory to download files to')
+                        help='Satellite, instrument, product, and sector. Ex: "G16-ABI-CMIP-03"')
 
     parser.add_argument('--start', metavar='start time', dest='start', required=True,
                         action='store', type=str, help='Start time')
@@ -94,7 +48,7 @@ def create_arg_parser():
     parser.add_argument('--end', metavar='end time', dest='end', required=True,
                         action='store', type=str, help='End time')
 
-    parser.add_argument('-d', '--dl', dest='dl', default=False, action='store_true',
+    parser.add_argument('-d', '--dl', dest='dl', default=None, action='store_true',
                         help='File download flag')
 
     parser.add_argument('--kill_aws_struct', dest='kill_aws_struct',
@@ -102,22 +56,70 @@ def create_arg_parser():
     return parser
 
 
+def parse_prod_arg(arg_dict):
+    """
+    Extract the satellite, instrument, imagery product, and channel from the
+    command line 'prod' argument.
+
+    Ex: -p "G16-ABI-CMIP-M2-03"
+        -p "G16-GLM"
+
+    Params
+    ------
+    arg_dict : dict of str
+        Parsed command line arguments
+
+    Return
+    -------
+    dict of str
+    """
+    # Split on '-'
+    # First element : satellite
+    # Second element: instrument
+    # Third element : imagery product
+    # Fourth element: sector
+    # Fifth element: channel
+    new_args = {'start': args.start,
+                'end'  : args.end,
+                'download': args.dl,
+                'kill_aws_struct': args.kill_aws_struct
+                }
+    splits = arg_dict.prod.split('-')
+    sat   = splits[0].upper()
+    instr = splits[1].upper()
+    if (instr == 'GLM'):
+        sector = ''
+        prod   = ''
+        chan   = ''
+    else:
+        prod   = splits[2].upper()
+        sector = splits[3].upper()
+        chan   = splits[4]
+    arg_dict['sat']    = sat
+    arg_dict['instr']  = instr
+    arg_dict['prod']   = prod
+    arg_dict['sector'] = sector
+    arg_dict['chan']   = chan
+    return arg_dict
+
+
 def main():
     parser = create_arg_parser()
     args = parser.parse_args()
+    _args = parse_prod_arg(args)
 
     conn = goesawsinterface.GoesAWSInterface()
 
-    imgs = conn.get_avail_images_in_range(args.sat, args.instr, args.start, args.end,
-                                          product=args.prod, sector=args.sector,
-                                          channel=args.channel)
+    imgs = conn.get_avail_images_in_range(_args['sat'], _args['instr'], _args['start'],
+                                          _args['end'], product=_args['prod'],
+                                          sector=args['sector'], channel=_args['chan'])
 
     for img in imgs:
         print('{} --> {}'.format(img.scan_time, img.filename))
 
-    if (args.dl and args.out_dir):
-        result = conn.download('goes16', imgs, args.out_dir, keep_aws_folders=args.kill_aws_struct,
-                               threads=6)
+    if (_args['download']):
+        result = conn.download('goes16', imgs, _args['download'],
+                               keep_aws_folders=_args['kill_aws_struct'], threads=6)
         for x in result._successfiles:
             print(x.filepath)
 
