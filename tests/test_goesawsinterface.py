@@ -271,25 +271,25 @@ class TestGoesAwsInterface(unittest.TestCase):
         """
         valid_days = ['{:03}'.format(x) for x in range(1, 366)]
         days = self.conn.get_avail_days('goes16', 'abi', '2018',
-                                            product='ABI-L2-CMIPM', sector='M1')
+                                            product='CMIPM', sector='M1')
         self.assertEqual(len(days), 365)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'abi', '2018',
-                                            product='ABI-L2-CMIPC', sector='C')
+                                            product='CMIPC', sector='C')
         self.assertEqual(len(days), 365)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'abi', '2018',
-                                            product='ABI-L1b-RadM', sector='M1')
+                                            product='RadM', sector='M1')
         self.assertEqual(len(days), 365)
         self.assertEqual(days, valid_days)
 
 
         days = self.conn.get_avail_days('goes16', 'abi', '2018',
-                                            product='ABI-L2-CMIPM', sector='M1')
+                                            product='CMIPM', sector='M1')
         self.assertEqual(len(days), 365)
         self.assertEqual(days, valid_days)
     # --------------------------------------------------------------------------
@@ -300,17 +300,17 @@ class TestGoesAwsInterface(unittest.TestCase):
         """
         valid_days = ['{:03}'.format(x) for x in range(1, 247)]
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
-                                            product='ABI-L2-CMIPC', sector='C')
+                                            product='CMIPC', sector='C')
         self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
-                                            product='ABI-L1b-RadM', sector='M1')
+                                            product='RadM', sector='M1')
         self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
         days = self.conn.get_avail_days('goes16', 'abi', '2019',
-                                            product='ABI-L2-CMIPM', sector='M1')
+                                            product='CMIPM', sector='M1')
         self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
     # --------------------------------------------------------------------------
@@ -326,7 +326,7 @@ class TestGoesAwsInterface(unittest.TestCase):
         self.assertEqual(len(days), 322)
         self.assertEqual(days, valid_days)
 
-        days = self.conn.get_avail_days('goes16', 'glm', '2018', product='GLM-L2-LCFA')
+        days = self.conn.get_avail_days('goes16', 'glm', '2018', product='LCFA')
         self.assertEqual(len(days), 322)
         self.assertEqual(days, valid_days)
     # --------------------------------------------------------------------------
@@ -341,7 +341,7 @@ class TestGoesAwsInterface(unittest.TestCase):
         self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
 
-        days = self.conn.get_avail_days('goes16', 'glm', '2019', product='GLM-L2-LCFA')
+        days = self.conn.get_avail_days('goes16', 'glm', '2019', product='LCFA')
         self.assertEqual(len(days), 246)
         self.assertEqual(days, valid_days)
     # --------------------------------------------------------------------------
@@ -394,7 +394,7 @@ class TestGoesAwsInterface(unittest.TestCase):
 
 
         with self.assertRaises(Exception) as context:
-            hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector=None)
+            hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='RadC', sector=None)
             self.assertTrue('Invalid product and/or sector parameter' in context.exception)
 
 
@@ -408,27 +408,27 @@ class TestGoesAwsInterface(unittest.TestCase):
         get_avail_hours; valid cases for GOES-16 & GOES-17 ABI
         """
         valid_hours = ['{:02}'.format(x) for x in range(0, 24)]
-        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector='C')
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='RadC', sector='C')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
 
-        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L2-CMIPC', sector='C')
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='CMIPC', sector='C')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
 
-        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='ABI-L2-CMIPM', sector='M1')
+        hours = self.conn.get_avail_hours('goes16', 'abi', '05-23-2019', product='CMIPM', sector='M1')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
 
-        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L2-CMIPC', sector='C')
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='CMIPC', sector='C')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
 
-        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L1b-RadC', sector='C')
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='RadC', sector='C')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
 
-        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='ABI-L1b-RadM', sector='M1')
+        hours = self.conn.get_avail_hours('goes17', 'abi', '05-23-2019', product='RadM', sector='M1')
         self.assertEqual(len(hours), 24)
         self.assertEqual(hours, valid_hours)
     # --------------------------------------------------------------------------
@@ -508,13 +508,13 @@ class TestGoesAwsInterface(unittest.TestCase):
         """
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
-                                                product='ABI-L1b-RadC', sector=None,
+                                                product='RadC', sector=None,
                                                 channel=None)
             self.assertTrue('Must provide sector parameter' in context.exception)
 
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
-                                                product='ABI-L1b-RadC', sector='M3',
+                                                product='ARadC', sector='M3',
                                                 channel=None)
             self.assertTrue('Must provide sector parameter' in context.exception)
     # --------------------------------------------------------------------------
@@ -525,19 +525,19 @@ class TestGoesAwsInterface(unittest.TestCase):
         """
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
-                                                product='ABI-L1-RadC', sector='C',
+                                                product='RadC', sector='C',
                                                 channel='13')
             self.assertTrue('Invalid product parameter' in context.exception)
 
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
-                                                product='ABI-L1c-RadC', sector='C',
+                                                product='RadC', sector='C',
                                                 channel='13')
             self.assertTrue('Invalid product parameter' in context.exception)
 
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images('goes16', 'abi', '05-23-2019-12',
-                                                product='ABI-L2-RadC', sector='C',
+                                                product='RadC', sector='C',
                                                 channel='13')
             self.assertTrue('Invalid product parameter' in context.exception)
     # --------------------------------------------------------------------------
@@ -632,14 +632,14 @@ class TestGoesAwsInterface(unittest.TestCase):
             images = self.conn.get_avail_images_in_range('goes16', 'abi',
                                                          '05-23-2019-12:00',
                                                          '05-23-2019-12:10',
-                                                         product='ABI-L1-RadM',
+                                                         product='RadM',
                                                          sector='M1', channel='3')
             self.assertTrue('Invalid product parameter' in context.exception)
         with self.assertRaises(Exception) as context:
             images = self.conn.get_avail_images_in_range('goes16', 'abi',
                                                          '05-23-2019-12:00',
                                                          '05-23-2019-12:10',
-                                                         product='ABI-L2-CMIIPM',
+                                                         product='CMIIPM',
                                                          sector='M1', channel='3')
             self.assertTrue('Invalid product parameter' in context.exception)
     # --------------------------------------------------------------------------
@@ -654,7 +654,7 @@ class TestGoesAwsInterface(unittest.TestCase):
         images = self.conn.get_avail_images_in_range('goes16', 'abi',
                                                      '05-23-2019-12:00',
                                                      '05-23-2019-12:10',
-                                                     product='ABI-L2-CMIPM',
+                                                     product='CMIPM',
                                                      sector='M1', channel='3')
         scan_times_true = []
         for img in images:
@@ -673,7 +673,7 @@ class TestGoesAwsInterface(unittest.TestCase):
         images = self.conn.get_avail_images_in_range('goes16', 'abi',
                                                      '05-23-2019-12:00',
                                                      '05-23-2019-12:59',
-                                                     product='ABI-L2-CMIPM',
+                                                     product='CMIPM',
                                                      sector='M1', channel='3')
         scan_times_true = []
         for img in images:
